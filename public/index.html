@@ -158,6 +158,78 @@ input::placeholder{color:rgba(255,255,255,.2)}
 #mute-btn{position:fixed;bottom:20px;left:132px;z-index:500;background:rgba(10,6,8,.9);border:1px solid rgba(232,200,74,.2);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;transition:all .2s;color:#e8c84a}
 #mute-btn:hover{border-color:rgba(232,200,74,.5);background:rgba(232,200,74,.08)}
 #mute-btn.hidden{display:none!important}
+
+/* ── DEBATE ARENA ── */
+.denom-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.denom-card{padding:12px 8px;border:1px solid rgba(255,255,255,.08);border-radius:2px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.02);text-align:center}
+.denom-card:hover{border-color:rgba(232,200,74,.3);background:rgba(255,255,255,.04);transform:translateY(-2px)}
+.denom-card.sel{border-color:#e8c84a;background:rgba(232,200,74,.1);box-shadow:0 0 20px rgba(232,200,74,.15)}
+.denom-icon{font-size:1.8rem;margin-bottom:4px}
+.denom-name{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.05em;color:#e8dfc0;line-height:1.2}
+
+.opp-categories{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+.opp-cat-title{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.2em;color:rgba(232,200,74,.5);text-transform:uppercase;margin-bottom:6px;padding-left:4px}
+.opp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.opp-card{padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:2px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.02);display:flex;gap:10px;align-items:flex-start}
+.opp-card:hover{border-color:rgba(220,60,60,.4);background:rgba(255,255,255,.04);transform:translateY(-2px)}
+.opp-icon-big{font-size:1.8rem;flex-shrink:0}
+.opp-info{flex:1;min-width:0}
+.opp-name{font-family:'Cinzel',serif;font-size:.78rem;color:#e8dfc0;margin-bottom:2px;font-weight:600}
+.opp-heresy{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.1em;color:#e85050;text-transform:uppercase;margin-bottom:4px}
+.opp-desc{font-family:'Crimson Pro',serif;font-size:.78rem;color:rgba(232,223,192,.6);line-height:1.3}
+
+.debate-arena{max-width:780px;width:100%;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 40px);padding:20px 0}
+.debate-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:rgba(10,6,8,.9);border:1px solid rgba(255,255,255,.08);border-radius:3px;margin-bottom:12px}
+.debate-opp-info{display:flex;gap:12px;align-items:center}
+.debate-opp-icon{font-size:2rem}
+.debate-opp-name{font-family:'Cinzel Decorative',serif;font-size:1.1rem;color:#e85050}
+.debate-opp-era{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.15em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-top:2px}
+.debate-score-panel{text-align:right}
+.debate-score-label{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.15em;color:rgba(232,200,74,.5);text-transform:uppercase}
+.debate-score-val{font-family:'Cinzel Decorative',serif;font-size:1.8rem;color:#e8c84a}
+
+.debate-messages{flex:1;overflow-y:auto;padding:8px 4px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+.debate-msg{display:flex;gap:10px;animation:slideIn .3s ease}
+.debate-msg.opponent{flex-direction:row}
+.debate-msg.user{flex-direction:row-reverse}
+.debate-msg-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+.debate-msg.opponent .debate-msg-av{background:rgba(220,60,60,.12);border-color:rgba(220,60,60,.3);color:#e85050}
+.debate-msg.user .debate-msg-av{background:rgba(232,200,74,.12);border-color:rgba(232,200,74,.3);color:#e8c84a}
+.debate-msg-body{flex:1;max-width:75%;padding:12px 16px;border-radius:8px;font-family:'Crimson Pro',serif;line-height:1.5}
+.debate-msg.opponent .debate-msg-body{background:rgba(220,60,60,.06);border:1px solid rgba(220,60,60,.2);color:#e8dfc0;border-top-left-radius:2px}
+.debate-msg.user .debate-msg-body{background:rgba(232,200,74,.06);border:1px solid rgba(232,200,74,.2);color:#e8dfc0;border-top-right-radius:2px}
+.debate-msg-text{font-size:.95rem;white-space:pre-wrap}
+
+.debate-feedback{margin-top:10px;padding:10px 12px;background:rgba(10,6,8,.6);border:1px dashed rgba(232,200,74,.25);border-radius:3px;font-family:'Crimson Pro',serif;font-size:.82rem;color:rgba(232,223,192,.7);font-style:italic}
+.debate-feedback-label{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.2em;color:rgba(232,200,74,.5);text-transform:uppercase;margin-bottom:4px;font-style:normal}
+.debate-score-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.debate-score-chip{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.05em;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(232,223,192,.7)}
+.debate-score-chip.good{color:#80e880;border-color:rgba(128,232,128,.3)}
+.debate-score-chip.mid{color:#e8c84a;border-color:rgba(232,200,74,.3)}
+.debate-score-chip.low{color:#e85050;border-color:rgba(232,80,80,.3)}
+
+.debate-thinking{padding:12px;text-align:center;color:rgba(232,200,74,.5)}
+.thinking-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#e8c84a;margin:0 2px;animation:thinkingPulse 1.4s ease infinite}
+.thinking-dot:nth-child(2){animation-delay:.2s}
+.thinking-dot:nth-child(3){animation-delay:.4s}
+@keyframes thinkingPulse{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+.debate-input-wrap{padding:14px;background:rgba(10,6,8,.9);border:1px solid rgba(255,255,255,.08);border-radius:3px}
+#debate-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:2px;color:#e8dfc0;font-family:'Crimson Pro',serif;font-size:1rem;padding:10px 14px;outline:none;resize:vertical;min-height:70px;max-height:200px;line-height:1.4}
+#debate-input:focus{border-color:rgba(232,200,74,.4)}
+.debate-input-bar{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
+.debate-input-bar .btn{margin:0;width:auto}
+
+.debate-result-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0}
+.debate-stat{padding:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:2px;text-align:center}
+.debate-stat-label{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.1em;color:rgba(232,200,74,.5);text-transform:uppercase;margin-bottom:4px}
+.debate-stat-val{font-family:'Cinzel Decorative',serif;font-size:1.4rem;color:#e8c84a}
+
+@media(max-width:600px){
+  .debate-arena{height:calc(100vh - 20px);padding:10px 0}
+  .debate-msg-body{max-width:85%}
+  .opp-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -174,6 +246,7 @@ input::placeholder{color:rgba(255,255,255,.2)}
     <div class="avatar-grid" id="avatar-grid"></div>
     <button class="btn btn-gold" onclick="goSetup()">✛ Create a Room</button>
     <button class="btn btn-outline" onclick="goJoin()">→ Join a Room</button>
+    <button class="btn btn-outline" onclick="goDebate()" style="border-color:rgba(220,60,60,.4);color:#e85050">⚔️ Enter the Debate Arena</button>
     <div class="italic-quote">"Thy word is a lamp unto my feet" — Psalm 119:105</div>
     <div style="text-align:center;margin-top:10px;font-family:Cinzel,serif;font-size:.55rem;letter-spacing:.1em;color:rgba(255,255,255,.2)">
       <span class="conn-dot" id="conn-dot"></span><span id="conn-label">Connecting...</span>
@@ -318,6 +391,93 @@ input::placeholder{color:rgba(255,255,255,.2)}
 </div>
 
 <div id="toast" style="opacity:0"></div>
+
+<!-- DEBATE: DENOMINATION SELECT -->
+<div id="screen-debate-denom" class="page hidden">
+  <div class="card" style="max-width:600px">
+    <h1 style="font-size:1.8rem">⚔️ Debate Arena</h1>
+    <div class="subtitle">✦ Defend the faith ✦</div>
+    <div class="divider"></div>
+    <label class="label">Step 1: Choose Your Denomination</label>
+    <div style="font-size:.78rem;color:rgba(255,255,255,.5);font-style:italic;margin-bottom:12px">The AI will anticipate arguments typical of your tradition</div>
+    <div id="denom-grid" class="denom-grid"></div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="show('home')">← Back</button>
+      <button class="btn btn-gold" id="denom-next-btn" onclick="goDebateOpponent()" disabled>Choose Opponent →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEBATE: OPPONENT SELECT -->
+<div id="screen-debate-opp" class="page hidden">
+  <div class="card" style="max-width:700px">
+    <h1 style="font-size:1.6rem">⚔️ Choose Your Opponent</h1>
+    <div class="subtitle" id="debate-selected-denom">✦ Defending as: — ✦</div>
+    <div class="divider"></div>
+    <label class="label">Step 2: Choose Difficulty</label>
+    <div class="diff-grid">
+      <div class="diff-card sel-easy" id="debate-diff-easy" onclick="selDebateDiff('easy')"><div class="diff-icon">🙂</div><div class="diff-name">Catechumen</div><div class="diff-label">Light sparring</div></div>
+      <div class="diff-card" id="debate-diff-medium" onclick="selDebateDiff('medium')"><div class="diff-icon">📖</div><div class="diff-name">Scholar</div><div class="diff-label">Real engagement</div></div>
+      <div class="diff-card" id="debate-diff-hard" onclick="selDebateDiff('hard')"><div class="diff-icon">🔥</div><div class="diff-name">Heresiarch</div><div class="diff-label">Brutal attack</div></div>
+    </div>
+    <label class="label">Step 3: Pick Your Foe</label>
+    <div id="opp-categories" class="opp-categories"></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="show('debate-denom')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEBATE: ARENA -->
+<div id="screen-debate-arena" class="page hidden">
+  <div class="debate-arena">
+    <div class="debate-header">
+      <div class="debate-opp-info">
+        <div class="debate-opp-icon" id="debate-opp-icon">⛪</div>
+        <div>
+          <div class="debate-opp-name" id="debate-opp-name">Opponent</div>
+          <div class="debate-opp-era" id="debate-opp-era"></div>
+        </div>
+      </div>
+      <div class="debate-score-panel">
+        <div class="debate-score-label">Your Score</div>
+        <div class="debate-score-val" id="debate-score-val">0</div>
+      </div>
+    </div>
+    <div class="debate-messages" id="debate-messages"></div>
+    <div class="debate-thinking hidden" id="debate-thinking">
+      <span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>
+      <span style="margin-left:8px;font-family:Cinzel,serif;font-size:.7rem;letter-spacing:.1em">Opponent is thinking...</span>
+    </div>
+    <div class="debate-input-wrap">
+      <textarea id="debate-input" placeholder="Compose your argument with Scripture..." rows="3" maxlength="2000"></textarea>
+      <div class="debate-input-bar">
+        <button class="btn btn-ghost btn-sm" onclick="debateSurrender()">🏳️ Surrender</button>
+        <button class="btn btn-ghost btn-sm" onclick="debateVoice()" id="debate-voice-btn">🎤 Speak</button>
+        <button class="btn btn-gold btn-sm" onclick="debateSend()">Submit Argument →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEBATE: RESULT -->
+<div id="screen-debate-result" class="page hidden">
+  <div class="card" style="max-width:560px">
+    <div id="debate-result-top" style="text-align:center">
+      <div style="font-size:3rem;margin-bottom:8px" id="debate-result-icon">⚔️</div>
+      <h1 id="debate-result-title" style="font-size:1.8rem">Debate Concluded</h1>
+      <div class="subtitle" id="debate-result-sub">✦ ✦ ✦</div>
+    </div>
+    <div class="divider"></div>
+    <div id="debate-result-summary" style="text-align:center;margin:16px 0"></div>
+    <div class="debate-result-stats" id="debate-result-stats"></div>
+    <div class="italic-quote" id="debate-result-quote">"Always be ready to give a defense" — 1 Peter 3:15</div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="goHome()">← Home</button>
+      <button class="btn btn-gold" onclick="goDebate()">⚔️ Debate Again</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
@@ -958,6 +1118,12 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    // Free public TURN server (needed when peers are behind restrictive NAT)
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   ]
 };
 
@@ -1018,6 +1184,13 @@ async function createPeer(peerId, initiator){
   const pc = new RTCPeerConnection(RTC_CONFIG);
   peers[peerId] = pc;
   
+  // Fallback: if direct connection fails after 5s, force TURN relay
+  setTimeout(() => {
+    if (pc.iceConnectionState === 'checking' || pc.iceConnectionState === 'new') {
+      console.log('⚠️ Connection slow, may need TURN fallback');
+    }
+  }, 5000);
+  
   // Add local audio track
   if (localStream) {
     localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
@@ -1025,15 +1198,35 @@ async function createPeer(peerId, initiator){
   
   // Handle remote stream
   pc.ontrack = (e) => {
+    console.log('🎙️ Got remote track from', peerId);
     let audio = peerAudios[peerId];
     if (!audio) {
       audio = document.createElement('audio');
       audio.autoplay = true;
+      audio.playsInline = true;
       audio.id = 'peer-audio-' + peerId;
       document.body.appendChild(audio);
       peerAudios[peerId] = audio;
     }
     audio.srcObject = e.streams[0];
+    // Force playback — some browsers block autoplay
+    audio.play().catch(err => {
+      console.error('Autoplay blocked:', err);
+      toast('🔊 Click anywhere to enable voice audio');
+      // Retry on any click
+      const retry = () => {
+        audio.play().catch(() => {});
+        document.removeEventListener('click', retry);
+      };
+      document.addEventListener('click', retry);
+    });
+  };
+  
+  pc.oniceconnectionstatechange = () => {
+    console.log('ICE state for', peerId, ':', pc.iceConnectionState);
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+      toast('🎙️ Connected to ' + (S.players.find(p => p.id === peerId)?.name || 'peer'));
+    }
   };
   
   // ICE candidate exchange
@@ -1136,6 +1329,347 @@ function toggleMusic() {
       toast('Allow audio in your browser to play music');
     });
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DEBATE ARENA CLIENT
+// ════════════════════════════════════════════════════════════════════════════
+const D = {
+  denomination: '',
+  denominationName: '',
+  opponentId: '',
+  opponent: null,
+  difficulty: 'medium',
+  history: [],        // [{role:'user'|'opponent', content, raw?, score?}]
+  totalScore: 0,
+  turns: 0,
+  opponentsList: [],
+  denominationsList: {},
+  loading: false,
+};
+
+async function goDebate(){
+  show('debate-denom');
+  // Fetch opponents and denominations
+  if (D.opponentsList.length === 0) {
+    try {
+      const res = await fetch('/api/debate/opponents');
+      const data = await res.json();
+      D.opponentsList = data.opponents;
+      D.denominationsList = data.denominations;
+      renderDenominations();
+    } catch (e) {
+      toast('Failed to load debate data');
+      console.error(e);
+    }
+  }
+}
+
+function renderDenominations(){
+  const grid = document.getElementById('denom-grid');
+  grid.innerHTML = Object.entries(D.denominationsList).map(([id, d]) => 
+    `<div class="denom-card" data-id="${id}" onclick="selDenomination('${id}','${d.name.replace(/'/g,"\\'")}')">
+      <div class="denom-icon">${d.icon}</div>
+      <div class="denom-name">${d.name}</div>
+    </div>`
+  ).join('');
+}
+
+function selDenomination(id, name){
+  D.denomination = id;
+  D.denominationName = name;
+  document.querySelectorAll('.denom-card').forEach(c => c.classList.toggle('sel', c.dataset.id === id));
+  document.getElementById('denom-next-btn').disabled = false;
+}
+
+function goDebateOpponent(){
+  if (!D.denomination) { toast('Pick a denomination first'); return; }
+  document.getElementById('debate-selected-denom').textContent = `✦ Defending as: ${D.denominationName} ✦`;
+  renderOpponents();
+  show('debate-opp');
+}
+
+function selDebateDiff(d){
+  D.difficulty = d;
+  ['easy','medium','hard'].forEach(x=>{
+    const el = document.getElementById('debate-diff-'+x);
+    el.className = 'diff-card';
+    if (x === d) el.classList.add('sel-'+x);
+  });
+}
+
+function renderOpponents(){
+  const cats = {
+    historical: { title: '⛪ Historical Heretics', list: [] },
+    modern: { title: '🌍 Modern Opponents', list: [] },
+    interfaith: { title: '☪️ Interfaith Dialogue', list: [] },
+    special: { title: '🪞 Special Opponents', list: [] },
+  };
+  D.opponentsList.forEach(o => {
+    if (cats[o.category]) cats[o.category].list.push(o);
+  });
+  
+  const html = Object.entries(cats)
+    .filter(([k, c]) => c.list.length > 0)
+    .map(([k, c]) => `
+      <div>
+        <div class="opp-cat-title">${c.title}</div>
+        <div class="opp-grid">
+          ${c.list.map(o => `
+            <div class="opp-card" onclick="startDebate('${o.id}')">
+              <div class="opp-icon-big">${o.icon}</div>
+              <div class="opp-info">
+                <div class="opp-name">${o.name}</div>
+                <div class="opp-heresy">${o.heresy}</div>
+                <div class="opp-desc">${o.description}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  document.getElementById('opp-categories').innerHTML = html;
+}
+
+function startDebate(opponentId){
+  const opp = D.opponentsList.find(o => o.id === opponentId);
+  if (!opp) return;
+  D.opponentId = opponentId;
+  D.opponent = opp;
+  D.history = [];
+  D.totalScore = 0;
+  D.turns = 0;
+  
+  // Setup arena
+  document.getElementById('debate-opp-icon').textContent = opp.icon;
+  document.getElementById('debate-opp-name').textContent = opp.name;
+  document.getElementById('debate-opp-era').textContent = opp.era + ' · ' + opp.heresy;
+  document.getElementById('debate-score-val').textContent = '0';
+  document.getElementById('debate-messages').innerHTML = '';
+  document.getElementById('debate-input').value = '';
+  
+  // Append opponent's opening statement
+  appendDebateMsg('opponent', opp.openingStatement);
+  D.history.push({ role: 'opponent', content: opp.openingStatement });
+  
+  show('debate-arena');
+  document.getElementById('debate-input').focus();
+}
+
+function appendDebateMsg(role, text, extras){
+  const msgs = document.getElementById('debate-messages');
+  const div = document.createElement('div');
+  div.className = 'debate-msg ' + role;
+  const icon = role === 'opponent' ? (D.opponent?.icon || '⚔️') : '✝️';
+  let extrasHtml = '';
+  if (extras && extras.score) {
+    const scores = [
+      { label: 'Scripture', val: extras.score.scriptureAccuracy },
+      { label: 'Logic', val: extras.score.logicalCoherence },
+      { label: 'Doctrine', val: extras.score.doctrinalGrounding },
+      { label: 'Rhetoric', val: extras.score.rhetoricalStrength },
+    ];
+    const chipsHtml = scores.map(s => {
+      const cls = s.val >= 8 ? 'good' : s.val >= 5 ? 'mid' : 'low';
+      return `<span class="debate-score-chip ${cls}">${s.label}: ${s.val}/10</span>`;
+    }).join('');
+    extrasHtml = `
+      <div class="debate-feedback">
+        <div class="debate-feedback-label">🎯 AI Coach</div>
+        ${extras.feedback}
+        <div class="debate-score-row">${chipsHtml}</div>
+      </div>
+    `;
+  }
+  div.innerHTML = `
+    <div class="debate-msg-av">${icon}</div>
+    <div class="debate-msg-body">
+      <div class="debate-msg-text">${escapeHtml(text)}</div>
+      ${extrasHtml}
+    </div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function debateSend(){
+  if (D.loading) return;
+  const input = document.getElementById('debate-input');
+  const text = input.value.trim();
+  if (!text) { toast('Write your argument first'); return; }
+  if (text.length < 20) { toast('Make a real argument — at least 20 characters'); return; }
+  
+  // Append user message
+  appendDebateMsg('user', text);
+  D.history.push({ role: 'user', content: text });
+  input.value = '';
+  
+  // Show thinking
+  D.loading = true;
+  document.getElementById('debate-thinking').classList.remove('hidden');
+  
+  try {
+    const res = await fetch('/api/debate/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        opponentId: D.opponentId,
+        denomination: D.denomination,
+        history: D.history.slice(0, -1), // exclude current user msg (sent separately)
+        userMessage: text,
+        difficulty: D.difficulty,
+      }),
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Request failed');
+    }
+    
+    const data = await res.json();
+    
+    // Update score
+    const turnScore = (data.score.scriptureAccuracy || 0) + (data.score.logicalCoherence || 0) + 
+                      (data.score.doctrinalGrounding || 0) + (data.score.rhetoricalStrength || 0);
+    D.totalScore += turnScore;
+    D.turns++;
+    document.getElementById('debate-score-val').textContent = D.totalScore;
+    
+    // Append last user msg's feedback by editing the last user msg DOM
+    const msgs = document.getElementById('debate-messages');
+    const lastUserMsg = msgs.querySelector('.debate-msg.user:last-of-type .debate-msg-body');
+    if (lastUserMsg) {
+      const scores = [
+        { label: 'Scripture', val: data.score.scriptureAccuracy },
+        { label: 'Logic', val: data.score.logicalCoherence },
+        { label: 'Doctrine', val: data.score.doctrinalGrounding },
+        { label: 'Rhetoric', val: data.score.rhetoricalStrength },
+      ];
+      const chipsHtml = scores.map(s => {
+        const cls = s.val >= 8 ? 'good' : s.val >= 5 ? 'mid' : 'low';
+        return `<span class="debate-score-chip ${cls}">${s.label}: ${s.val}/10</span>`;
+      }).join('');
+      lastUserMsg.insertAdjacentHTML('beforeend', `
+        <div class="debate-feedback">
+          <div class="debate-feedback-label">🎯 AI Coach</div>
+          ${escapeHtml(data.feedback || '')}
+          <div class="debate-score-row">${chipsHtml}</div>
+        </div>
+      `);
+    }
+    
+    // Append opponent response
+    appendDebateMsg('opponent', data.response);
+    D.history.push({ role: 'opponent', content: data.response, raw: data });
+    
+    // Check for concession
+    if (data.conceded) {
+      setTimeout(() => endDebate('victory'), 2000);
+    }
+    
+  } catch (err) {
+    toast('AI error: ' + err.message);
+    console.error(err);
+  } finally {
+    D.loading = false;
+    document.getElementById('debate-thinking').classList.add('hidden');
+  }
+}
+
+function debateSurrender(){
+  if (!confirm('Surrender this debate? You\'ll keep what you\'ve learned.')) return;
+  endDebate('surrender');
+}
+
+function endDebate(reason){
+  const avg = D.turns > 0 ? Math.round(D.totalScore / D.turns) : 0;
+  let icon = '⚔️', title = 'Debate Concluded', sub = '✦ The argument ends ✦', quote = '"Always be ready to give a defense" — 1 Peter 3:15';
+  let summary = '';
+  
+  if (reason === 'victory') {
+    icon = '👑';
+    title = 'VICTORY!';
+    sub = `✦ ${D.opponent.name} has conceded ✦`;
+    quote = '"By the foolishness of preaching... God chose" — 1 Corinthians 1:21';
+    summary = `You defeated <strong style="color:#e8c84a">${D.opponent.name}</strong> with the strength of Scripture and sound doctrine. Well fought, defender of the faith.`;
+  } else if (reason === 'surrender') {
+    icon = '🏳️';
+    title = 'Honorable Retreat';
+    sub = '✦ Every defeat is a lesson ✦';
+    quote = '"The wise learn from every encounter"';
+    summary = `You surrendered to <strong style="color:#e85050">${D.opponent.name}</strong> after ${D.turns} rounds. Study, pray, and return stronger.`;
+  }
+  
+  document.getElementById('debate-result-icon').textContent = icon;
+  document.getElementById('debate-result-title').textContent = title;
+  document.getElementById('debate-result-sub').textContent = sub;
+  document.getElementById('debate-result-quote').textContent = quote;
+  document.getElementById('debate-result-summary').innerHTML = summary;
+  
+  document.getElementById('debate-result-stats').innerHTML = `
+    <div class="debate-stat"><div class="debate-stat-label">Total Score</div><div class="debate-stat-val">${D.totalScore}</div></div>
+    <div class="debate-stat"><div class="debate-stat-label">Rounds</div><div class="debate-stat-val">${D.turns}</div></div>
+    <div class="debate-stat"><div class="debate-stat-label">Avg / Turn</div><div class="debate-stat-val">${avg}/40</div></div>
+    <div class="debate-stat"><div class="debate-stat-label">Opponent</div><div class="debate-stat-val" style="font-size:.9rem;line-height:1.4">${D.opponent.icon} ${D.opponent.name}</div></div>
+  `;
+  
+  show('debate-result');
+}
+
+// Enter to send (Shift+Enter for newline)
+document.addEventListener('keydown', (e) => {
+  if (document.getElementById('screen-debate-arena') && 
+      !document.getElementById('screen-debate-arena').classList.contains('hidden')) {
+    if (e.key === 'Enter' && !e.shiftKey && document.activeElement?.id === 'debate-input') {
+      e.preventDefault();
+      debateSend();
+    }
+  }
+});
+
+// Voice-to-text for debate
+let debateRecognition = null;
+function debateVoice(){
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    toast('Voice input not supported in this browser');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  
+  if (debateRecognition) {
+    debateRecognition.stop();
+    debateRecognition = null;
+    document.getElementById('debate-voice-btn').textContent = '🎤 Speak';
+    return;
+  }
+  
+  debateRecognition = new SR();
+  debateRecognition.lang = 'en-US';
+  debateRecognition.continuous = true;
+  debateRecognition.interimResults = true;
+  
+  debateRecognition.onresult = (e) => {
+    let text = '';
+    for (let i = 0; i < e.results.length; i++) {
+      text += e.results[i][0].transcript + ' ';
+    }
+    document.getElementById('debate-input').value = text.trim();
+  };
+  
+  debateRecognition.onend = () => {
+    document.getElementById('debate-voice-btn').textContent = '🎤 Speak';
+    debateRecognition = null;
+  };
+  
+  debateRecognition.start();
+  document.getElementById('debate-voice-btn').textContent = '⏹️ Stop';
+  toast('🎙️ Listening...');
 }
 
 init();
