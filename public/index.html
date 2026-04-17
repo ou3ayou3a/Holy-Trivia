@@ -225,6 +225,24 @@ input::placeholder{color:rgba(255,255,255,.2)}
 .debate-stat-label{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.1em;color:rgba(232,200,74,.5);text-transform:uppercase;margin-bottom:4px}
 .debate-stat-val{font-family:'Cinzel Decorative',serif;font-size:1.4rem;color:#e8c84a}
 
+/* ── SAVED DEBATES LIST ── */
+.saved-list{display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto;padding:4px 2px}
+.saved-row{display:flex;gap:10px;padding:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:2px;align-items:center;transition:all .15s;cursor:pointer}
+.saved-row:hover{background:rgba(255,255,255,.05);border-color:rgba(232,200,74,.3)}
+.saved-icon{font-size:1.8rem;flex-shrink:0}
+.saved-info{flex:1;min-width:0}
+.saved-title{font-family:'Cinzel',serif;font-size:.85rem;color:#e8dfc0;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.saved-meta{display:flex;gap:8px;font-family:'Crimson Pro',serif;font-size:.78rem;color:rgba(232,223,192,.5);flex-wrap:wrap}
+.saved-meta span::before{content:'·';margin-right:8px;color:rgba(232,200,74,.3)}
+.saved-meta span:first-child::before{content:''}
+.saved-actions{display:flex;gap:6px;flex-shrink:0}
+.saved-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#e8dfc0;border-radius:2px;padding:6px 10px;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.saved-btn:hover{background:rgba(232,200,74,.1);border-color:rgba(232,200,74,.4);color:#e8c84a}
+.saved-btn.danger:hover{background:rgba(220,60,60,.1);border-color:rgba(220,60,60,.4);color:#e85050}
+.saved-outcome-victory{color:#80e880;font-weight:600}
+.saved-outcome-surrender{color:#e85050}
+.saved-outcome-ongoing{color:#e8c84a}
+
 @media(max-width:600px){
   .debate-arena{height:calc(100vh - 20px);padding:10px 0}
   .debate-msg-body{max-width:85%}
@@ -403,7 +421,24 @@ input::placeholder{color:rgba(255,255,255,.2)}
     <div id="denom-grid" class="denom-grid"></div>
     <div class="btn-row" style="margin-top:16px">
       <button class="btn btn-ghost" onclick="show('home')">← Back</button>
+      <button class="btn btn-outline" onclick="goSavedDebates()" style="border-color:rgba(80,200,120,.4);color:#80e880">📚 My Saved Debates</button>
       <button class="btn btn-gold" id="denom-next-btn" onclick="goDebateOpponent()" disabled>Choose Opponent →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEBATE: SAVED LIST -->
+<div id="screen-debate-saved" class="page hidden">
+  <div class="card" style="max-width:680px">
+    <h1 style="font-size:1.6rem">📚 My Saved Debates</h1>
+    <div class="subtitle">✦ Resume or review past battles ✦</div>
+    <div class="divider"></div>
+    <div id="saved-list" class="saved-list"></div>
+    <div id="saved-empty" class="hidden" style="text-align:center;padding:30px 10px;color:rgba(255,255,255,.4);font-family:'Crimson Pro',serif;font-size:1rem;font-style:italic">
+      No saved debates yet.<br>Click 💾 Save during a debate to save your progress.
+    </div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="show('debate-denom')">← Back</button>
     </div>
   </div>
 </div>
@@ -454,6 +489,7 @@ input::placeholder{color:rgba(255,255,255,.2)}
       <div class="debate-input-bar">
         <button class="btn btn-ghost btn-sm" onclick="debateSurrender()">🏳️ Surrender</button>
         <button class="btn btn-ghost btn-sm" onclick="debateVoice()" id="debate-voice-btn">🎤 Speak</button>
+        <button class="btn btn-outline btn-sm" onclick="debateSave()" id="debate-save-btn" style="border-color:rgba(80,200,120,.4);color:#80e880">💾 Save</button>
         <button class="btn btn-gold btn-sm" onclick="debateSend()">Submit Argument →</button>
       </div>
     </div>
@@ -1346,7 +1382,19 @@ const D = {
   opponentsList: [],
   denominationsList: {},
   loading: false,
+  savedId: null,     // set when loaded from saved or after first save
 };
+
+// ─── USER TOKEN (local identifier, persists in localStorage) ────────────────
+function getUserToken() {
+  let t = localStorage.getItem('holy_user_token');
+  if (!t) {
+    t = 'u_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    localStorage.setItem('holy_user_token', t);
+  }
+  return t;
+}
 
 async function goDebate(){
   show('debate-denom');
@@ -1439,6 +1487,7 @@ function startDebate(opponentId){
   D.history = [];
   D.totalScore = 0;
   D.turns = 0;
+  D.savedId = null;
   
   // Setup arena
   document.getElementById('debate-opp-icon').textContent = opp.icon;
@@ -1447,6 +1496,7 @@ function startDebate(opponentId){
   document.getElementById('debate-score-val').textContent = '0';
   document.getElementById('debate-messages').innerHTML = '';
   document.getElementById('debate-input').value = '';
+  updateSaveButtonLabel();
   
   // Append opponent's opening statement
   appendDebateMsg('opponent', opp.openingStatement);
@@ -1454,6 +1504,12 @@ function startDebate(opponentId){
   
   show('debate-arena');
   document.getElementById('debate-input').focus();
+}
+
+function updateSaveButtonLabel() {
+  const btn = document.getElementById('debate-save-btn');
+  if (!btn) return;
+  btn.textContent = D.savedId ? '💾 Update Save' : '💾 Save';
 }
 
 function appendDebateMsg(role, text, extras){
@@ -1671,6 +1727,230 @@ function debateVoice(){
   document.getElementById('debate-voice-btn').textContent = '⏹️ Stop';
   toast('🎙️ Listening...');
 }
+
+// ─── SAVE / LOAD DEBATES ────────────────────────────────────────────────────
+async function debateSave() {
+  if (!D.opponent) { toast('No active debate to save'); return; }
+  if (D.loading) return;
+  
+  const btn = document.getElementById('debate-save-btn');
+  const originalText = btn.textContent;
+  btn.textContent = '💾 Saving...';
+  btn.disabled = true;
+  
+  try {
+    const payload = {
+      id: D.savedId || undefined,
+      title: `${D.opponent.icon} ${D.opponent.name} · ${D.denominationName}`,
+      opponentId: D.opponentId,
+      opponentName: D.opponent.name,
+      opponentIcon: D.opponent.icon,
+      denomination: D.denomination,
+      denominationName: D.denominationName,
+      difficulty: D.difficulty,
+      totalScore: D.totalScore,
+      turns: D.turns,
+      outcome: null, // ongoing
+      history: D.history,
+    };
+    
+    const res = await fetch('/api/debates', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-token': getUserToken(),
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Save failed');
+    }
+    
+    const data = await res.json();
+    D.savedId = data.id;
+    toast(data.created ? '✅ Debate saved!' : '✅ Debate updated!');
+  } catch (err) {
+    toast('Save failed: ' + err.message);
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    updateSaveButtonLabel();
+  }
+}
+
+async function goSavedDebates() {
+  show('debate-saved');
+  const listEl = document.getElementById('saved-list');
+  const emptyEl = document.getElementById('saved-empty');
+  listEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;font-style:italic">Loading...</div>';
+  emptyEl.classList.add('hidden');
+  
+  try {
+    const res = await fetch('/api/debates', {
+      headers: { 'x-user-token': getUserToken() },
+    });
+    if (!res.ok) throw new Error('Failed to load');
+    const data = await res.json();
+    const debates = data.debates || [];
+    
+    if (debates.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+    
+    emptyEl.classList.add('hidden');
+    listEl.innerHTML = debates.map(d => {
+      const date = new Date(d.updated_at);
+      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      let outcomeStr = '';
+      let outcomeCls = 'saved-outcome-ongoing';
+      if (d.outcome === 'victory') { outcomeStr = '👑 Victory'; outcomeCls = 'saved-outcome-victory'; }
+      else if (d.outcome === 'surrender') { outcomeStr = '🏳️ Surrendered'; outcomeCls = 'saved-outcome-surrender'; }
+      else outcomeStr = '⏸️ In progress';
+      
+      const diffMap = { easy: 'Catechumen', medium: 'Scholar', hard: 'Heresiarch' };
+      
+      return `
+        <div class="saved-row" onclick="loadSavedDebate('${d.id}')">
+          <div class="saved-icon">${d.opponent_icon}</div>
+          <div class="saved-info">
+            <div class="saved-title">${escapeHtml(d.title)}</div>
+            <div class="saved-meta">
+              <span class="${outcomeCls}">${outcomeStr}</span>
+              <span>${d.turns} rounds</span>
+              <span>${d.total_score} pts</span>
+              <span>${diffMap[d.difficulty] || d.difficulty}</span>
+              <span>${dateStr}</span>
+            </div>
+          </div>
+          <div class="saved-actions">
+            <button class="saved-btn" onclick="event.stopPropagation();loadSavedDebate('${d.id}')">Resume</button>
+            <button class="saved-btn danger" onclick="event.stopPropagation();deleteSavedDebate('${d.id}','${escapeHtml(d.title).replace(/'/g,"\\'")}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    listEl.innerHTML = `<div style="text-align:center;color:#e85050;padding:20px">Error: ${err.message}</div>`;
+  }
+}
+
+async function loadSavedDebate(id) {
+  // Need opponents list loaded first
+  if (D.opponentsList.length === 0) {
+    try {
+      const r = await fetch('/api/debate/opponents');
+      const d = await r.json();
+      D.opponentsList = d.opponents;
+      D.denominationsList = d.denominations;
+    } catch (e) { toast('Failed to load'); return; }
+  }
+  
+  try {
+    const res = await fetch('/api/debates/' + id, {
+      headers: { 'x-user-token': getUserToken() },
+    });
+    if (!res.ok) throw new Error('Failed to load debate');
+    const { debate } = await res.json();
+    
+    // Find opponent
+    const opp = D.opponentsList.find(o => o.id === debate.opponent_id);
+    if (!opp) { toast('Opponent no longer exists'); return; }
+    
+    // Restore state
+    D.opponent = opp;
+    D.opponentId = debate.opponent_id;
+    D.denomination = debate.denomination;
+    D.denominationName = debate.denomination_name;
+    D.difficulty = debate.difficulty;
+    D.history = debate.history;
+    D.totalScore = debate.total_score;
+    D.turns = debate.turns;
+    D.savedId = debate.id;
+    
+    // Render arena
+    document.getElementById('debate-opp-icon').textContent = opp.icon;
+    document.getElementById('debate-opp-name').textContent = opp.name;
+    document.getElementById('debate-opp-era').textContent = opp.era + ' · ' + opp.heresy;
+    document.getElementById('debate-score-val').textContent = D.totalScore;
+    document.getElementById('debate-input').value = '';
+    
+    const msgs = document.getElementById('debate-messages');
+    msgs.innerHTML = '';
+    
+    // Rebuild message thread from history
+    for (let i = 0; i < D.history.length; i++) {
+      const turn = D.history[i];
+      // If this is a user message followed by an opponent turn with score data, add feedback
+      if (turn.role === 'user') {
+        const next = D.history[i + 1];
+        const extras = (next && next.raw && next.raw.score) 
+          ? { score: next.raw.score, feedback: next.raw.feedback || '' }
+          : null;
+        appendDebateMsg('user', turn.content, extras);
+      } else if (turn.role === 'opponent') {
+        appendDebateMsg('opponent', turn.content);
+      }
+    }
+    
+    updateSaveButtonLabel();
+    show('debate-arena');
+    toast('📜 Debate resumed');
+  } catch (err) {
+    toast('Load failed: ' + err.message);
+    console.error(err);
+  }
+}
+
+async function deleteSavedDebate(id, title) {
+  if (!confirm(`Delete this debate?\n\n"${title}"\n\nThis cannot be undone.`)) return;
+  
+  try {
+    const res = await fetch('/api/debates/' + id, {
+      method: 'DELETE',
+      headers: { 'x-user-token': getUserToken() },
+    });
+    if (!res.ok) throw new Error('Delete failed');
+    toast('🗑️ Debate deleted');
+    // Refresh list
+    goSavedDebates();
+  } catch (err) {
+    toast('Delete failed: ' + err.message);
+  }
+}
+
+// Override endDebate to auto-save final outcome if this debate is saved
+const _origEndDebate = endDebate;
+endDebate = function(reason) {
+  // Auto-save the final outcome if we have a saved debate
+  if (D.savedId) {
+    fetch('/api/debates', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-token': getUserToken(),
+      },
+      body: JSON.stringify({
+        id: D.savedId,
+        title: `${D.opponent.icon} ${D.opponent.name} · ${D.denominationName}`,
+        opponentId: D.opponentId,
+        opponentName: D.opponent.name,
+        opponentIcon: D.opponent.icon,
+        denomination: D.denomination,
+        denominationName: D.denominationName,
+        difficulty: D.difficulty,
+        totalScore: D.totalScore,
+        turns: D.turns,
+        outcome: reason,
+        history: D.history,
+      }),
+    }).catch(err => console.error('Auto-save failed:', err));
+  }
+  _origEndDebate(reason);
+};
 
 init();
 </script>

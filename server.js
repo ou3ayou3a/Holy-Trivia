@@ -3,6 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
+const Database = require('better-sqlite3');
+const crypto = require('crypto');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,12 +14,60 @@ const io = new Server(server, {
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '2mb' }));
 
 // Anthropic client — reads ANTHROPIC_API_KEY from Railway env vars
 const anthropic = process.env.ANTHROPIC_API_KEY 
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) 
   : null;
+
+// ─── Database Setup ─────────────────────────────────────────────────────────
+// Railway persistent volume is at /data if available, else use local file
+const DB_DIR = fs.existsSync('/data') ? '/data' : __dirname;
+const DB_PATH = path.join(DB_DIR, 'holytrivia.db');
+console.log('📀 Database path:', DB_PATH);
+
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
+
+// Schema
+db.exec(`
+  CREATE TABLE IF NOT EXISTS saved_debates (
+    id TEXT PRIMARY KEY,
+    user_token TEXT NOT NULL,
+    title TEXT NOT NULL,
+    opponent_id TEXT NOT NULL,
+    opponent_name TEXT NOT NULL,
+    opponent_icon TEXT NOT NULL,
+    denomination TEXT NOT NULL,
+    denomination_name TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    total_score INTEGER DEFAULT 0,
+    turns INTEGER DEFAULT 0,
+    outcome TEXT,
+    history_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_token ON saved_debates(user_token);
+  CREATE INDEX IF NOT EXISTS idx_updated_at ON saved_debates(updated_at);
+`);
+
+const stmts = {
+  insertDebate: db.prepare(`
+    INSERT INTO saved_debates 
+    (id, user_token, title, opponent_id, opponent_name, opponent_icon, denomination, denomination_name, difficulty, total_score, turns, outcome, history_json, created_at, updated_at)
+    VALUES (@id, @user_token, @title, @opponent_id, @opponent_name, @opponent_icon, @denomination, @denomination_name, @difficulty, @total_score, @turns, @outcome, @history_json, @created_at, @updated_at)
+  `),
+  updateDebate: db.prepare(`
+    UPDATE saved_debates 
+    SET title=@title, total_score=@total_score, turns=@turns, outcome=@outcome, history_json=@history_json, updated_at=@updated_at
+    WHERE id=@id AND user_token=@user_token
+  `),
+  getDebate: db.prepare('SELECT * FROM saved_debates WHERE id=? AND user_token=?'),
+  listDebates: db.prepare('SELECT id, title, opponent_name, opponent_icon, denomination_name, difficulty, total_score, turns, outcome, created_at, updated_at FROM saved_debates WHERE user_token=? ORDER BY updated_at DESC LIMIT 100'),
+  deleteDebate: db.prepare('DELETE FROM saved_debates WHERE id=? AND user_token=?'),
+};
 
 // ─── In-memory room store ───────────────────────────────────────────────────
 const rooms = {}; // roomCode -> roomState
@@ -1094,6 +1145,116 @@ Rules:
   } catch (err) {
     console.error('Debate API error:', err);
     res.status(500).json({ error: err.message || 'Debate API failed' });
+  }
+});
+
+// ─── Saved Debates API ──────────────────────────────────────────────────────
+function validateToken(token) {
+  return typeof token === 'string' && /^[a-zA-Z0-9_-]{16,100}$/.test(token);
+}
+
+// List all saved debates for this user
+app.get('/api/debates', (req, res) => {
+  const token = req.headers['x-user-token'];
+  if (!validateToken(token)) return res.status(400).json({ error: 'Invalid user token' });
+  try {
+    const rows = stmts.listDebates.all(token);
+    res.json({ debates: rows });
+  } catch (err) {
+    console.error('List debates error:', err);
+    res.status(500).json({ error: 'Failed to list debates' });
+  }
+});
+
+// Load a specific debate (to resume it)
+app.get('/api/debates/:id', (req, res) => {
+  const token = req.headers['x-user-token'];
+  if (!validateToken(token)) return res.status(400).json({ error: 'Invalid user token' });
+  try {
+    const row = stmts.getDebate.get(req.params.id, token);
+    if (!row) return res.status(404).json({ error: 'Debate not found' });
+    row.history = JSON.parse(row.history_json);
+    delete row.history_json;
+    res.json({ debate: row });
+  } catch (err) {
+    console.error('Get debate error:', err);
+    res.status(500).json({ error: 'Failed to load debate' });
+  }
+});
+
+// Save a new debate OR update existing one
+app.post('/api/debates', (req, res) => {
+  const token = req.headers['x-user-token'];
+  if (!validateToken(token)) return res.status(400).json({ error: 'Invalid user token' });
+  try {
+    const { id, title, opponentId, opponentName, opponentIcon, denomination, denominationName, difficulty, totalScore, turns, outcome, history } = req.body;
+    
+    if (!opponentId || !denomination || !Array.isArray(history)) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const now = Date.now();
+    const finalTitle = (title || `${opponentName} · ${denominationName}`).slice(0, 200);
+    const historyJson = JSON.stringify(history);
+    
+    if (historyJson.length > 500000) {
+      return res.status(400).json({ error: 'Debate too large to save' });
+    }
+    
+    if (id) {
+      // Update existing
+      const existing = stmts.getDebate.get(id, token);
+      if (!existing) return res.status(404).json({ error: 'Debate not found' });
+      
+      stmts.updateDebate.run({
+        id,
+        user_token: token,
+        title: finalTitle,
+        total_score: totalScore || 0,
+        turns: turns || 0,
+        outcome: outcome || null,
+        history_json: historyJson,
+        updated_at: now,
+      });
+      res.json({ id, saved: true, created: false });
+    } else {
+      // Create new
+      const newId = crypto.randomBytes(12).toString('hex');
+      stmts.insertDebate.run({
+        id: newId,
+        user_token: token,
+        title: finalTitle,
+        opponent_id: opponentId,
+        opponent_name: opponentName || 'Unknown',
+        opponent_icon: opponentIcon || '⚔️',
+        denomination,
+        denomination_name: denominationName || denomination,
+        difficulty: difficulty || 'medium',
+        total_score: totalScore || 0,
+        turns: turns || 0,
+        outcome: outcome || null,
+        history_json: historyJson,
+        created_at: now,
+        updated_at: now,
+      });
+      res.json({ id: newId, saved: true, created: true });
+    }
+  } catch (err) {
+    console.error('Save debate error:', err);
+    res.status(500).json({ error: 'Failed to save debate' });
+  }
+});
+
+// Delete a debate
+app.delete('/api/debates/:id', (req, res) => {
+  const token = req.headers['x-user-token'];
+  if (!validateToken(token)) return res.status(400).json({ error: 'Invalid user token' });
+  try {
+    const result = stmts.deleteDebate.run(req.params.id, token);
+    res.json({ deleted: result.changes > 0 });
+  } catch (err) {
+    console.error('Delete debate error:', err);
+    res.status(500).json({ error: 'Failed to delete debate' });
   }
 });
 
