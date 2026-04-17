@@ -126,6 +126,104 @@ const QB = {
   ]
 };
 
+// ─── Bible Study Mode — Questions by Book ───────────────────────────────────
+const BOOKS = {
+  Genesis: [
+    {q:"On which day did God create the stars, sun, and moon?",a:["Fourth","First","Third","Sixth"],c:0,ref:"Genesis 1:14-19",ex:"God made the two great lights and the stars on the fourth day."},
+    {q:"What did God command Adam not to eat from?",a:["The tree of knowledge of good and evil","The tree of life","The fig tree","The olive tree"],c:0,ref:"Genesis 2:17",ex:"The tree of knowledge of good and evil was forbidden."},
+    {q:"Who was the first son of Adam and Eve?",a:["Cain","Abel","Seth","Enoch"],c:0,ref:"Genesis 4:1",ex:"Cain was the firstborn."},
+    {q:"How many of each clean animal did Noah bring on the ark?",a:["Seven pairs","One pair","Two pairs","Three pairs"],c:0,ref:"Genesis 7:2",ex:"Seven pairs of clean animals, one pair of unclean."},
+    {q:"What was the name of Abraham's wife?",a:["Sarah","Hagar","Rebekah","Rachel"],c:0,ref:"Genesis 17:15",ex:"Sarah, originally called Sarai."},
+    {q:"What sign did God give Noah after the flood?",a:["Rainbow","Dove","Olive branch","Cloud"],c:0,ref:"Genesis 9:13",ex:"The rainbow as a covenant sign."},
+    {q:"How old was Abraham when Isaac was born?",a:["100","75","90","120"],c:0,ref:"Genesis 21:5",ex:"Abraham was 100 years old."},
+    {q:"Who did Jacob wrestle with at Peniel?",a:["An angel of God","His brother Esau","Laban","A stranger at the well"],c:0,ref:"Genesis 32:24-30",ex:"Jacob wrestled with God's messenger and was renamed Israel."},
+    {q:"How many sons did Jacob have?",a:["12","10","13","14"],c:0,ref:"Genesis 35:22-26",ex:"The twelve sons became the twelve tribes of Israel."},
+    {q:"Who sold Joseph into slavery?",a:["His brothers","Potiphar","The Ishmaelites","Pharaoh's officials"],c:0,ref:"Genesis 37:28",ex:"His brothers sold him to Ishmaelite traders for 20 pieces of silver."},
+  ],
+  Exodus: [
+    {q:"Who raised Moses as her son?",a:["Pharaoh's daughter","His sister Miriam","His mother","A shepherdess"],c:0,ref:"Exodus 2:10",ex:"Pharaoh's daughter drew him from the Nile and raised him."},
+    {q:"From what did God speak to Moses at Mount Horeb?",a:["A burning bush","A pillar of fire","A cloud","A great light"],c:0,ref:"Exodus 3:2",ex:"The bush burned but was not consumed."},
+    {q:"How many plagues did God send on Egypt?",a:["10","7","12","8"],c:0,ref:"Exodus 7-12",ex:"Ten plagues culminating in the death of the firstborn."},
+    {q:"What was the first plague?",a:["Water turned to blood","Frogs","Locusts","Darkness"],c:0,ref:"Exodus 7:20",ex:"The Nile and all Egyptian waters became blood."},
+    {q:"What did the Israelites eat on the night of Passover?",a:["Lamb with unleavened bread and bitter herbs","Bread and wine","Manna and quail","Fish and bread"],c:0,ref:"Exodus 12:8",ex:"Roasted lamb, unleavened bread, bitter herbs."},
+    {q:"How did Moses part the Red Sea?",a:["By stretching out his staff","By commanding the waters","By praying aloud","By striking a rock"],c:0,ref:"Exodus 14:21",ex:"Moses stretched his hand over the sea and God sent an east wind."},
+    {q:"How many commandments did God give Moses on Mount Sinai?",a:["10","12","7","15"],c:0,ref:"Exodus 20",ex:"The Ten Commandments."},
+    {q:"What did God provide for food in the wilderness?",a:["Manna and quail","Bread and wine","Only water","Fish"],c:0,ref:"Exodus 16",ex:"Manna each morning, quail in the evening."},
+    {q:"Who was Moses's brother who served as his spokesman?",a:["Aaron","Joshua","Caleb","Hur"],c:0,ref:"Exodus 4:14",ex:"Aaron was appointed to speak for Moses."},
+    {q:"What was placed inside the Ark of the Covenant?",a:["The tablets of the law","Manna only","Aaron's staff only","Incense"],c:0,ref:"Exodus 25:16",ex:"The tablets of the Testimony, later with manna and Aaron's staff."},
+  ],
+  Psalms: [
+    {q:"'The Lord is my shepherd' begins which Psalm?",a:["Psalm 23","Psalm 1","Psalm 51","Psalm 100"],c:0,ref:"Psalm 23:1",ex:"Psalm 23, one of the most beloved in all Scripture."},
+    {q:"How many Psalms are there in total?",a:["150","120","100","144"],c:0,ref:"Book of Psalms",ex:"The Psalter contains 150 psalms."},
+    {q:"Who wrote most of the Psalms?",a:["David","Solomon","Moses","Asaph"],c:0,ref:"Psalms tradition",ex:"David is credited with 73 psalms; tradition attributes many more to him."},
+    {q:"Which Psalm is the longest?",a:["Psalm 119","Psalm 78","Psalm 89","Psalm 136"],c:0,ref:"Psalm 119",ex:"With 176 verses, Psalm 119 is the longest chapter in the Bible."},
+    {q:"Which Psalm is David's psalm of repentance after Bathsheba?",a:["Psalm 51","Psalm 23","Psalm 32","Psalm 6"],c:0,ref:"Psalm 51",ex:"Written after Nathan confronted David about his sin."},
+    {q:"'Blessed is the man' opens which Psalm?",a:["Psalm 1","Psalm 2","Psalm 40","Psalm 119"],c:0,ref:"Psalm 1:1",ex:"Psalm 1 contrasts the righteous and wicked."},
+    {q:"What does Psalm 150 call all creation to do?",a:["Praise the Lord","Fear the Lord","Love one another","Keep the commandments"],c:0,ref:"Psalm 150:6",ex:"'Let everything that has breath praise the Lord.'"},
+    {q:"'My God, my God, why hast thou forsaken me' is from which Psalm?",a:["Psalm 22","Psalm 31","Psalm 69","Psalm 88"],c:0,ref:"Psalm 22:1",ex:"A messianic psalm quoted by Christ on the cross."},
+    {q:"Which Psalm begins 'Out of the depths I cry to you, O Lord'?",a:["Psalm 130","Psalm 42","Psalm 6","Psalm 86"],c:0,ref:"Psalm 130:1",ex:"A penitential psalm, one of the Songs of Ascents."},
+    {q:"How many Songs of Ascents are there?",a:["15","12","7","10"],c:0,ref:"Psalms 120-134",ex:"Psalms 120-134, sung by pilgrims going up to Jerusalem."},
+  ],
+  Matthew: [
+    {q:"How many wise men visited the infant Jesus?",a:["The number is not specified","Three","Twelve","Seven"],c:0,ref:"Matthew 2:1",ex:"Matthew mentions wise men from the East but gives no number."},
+    {q:"Where was Jesus born?",a:["Bethlehem","Nazareth","Jerusalem","Capernaum"],c:0,ref:"Matthew 2:1",ex:"Jesus was born in Bethlehem of Judea."},
+    {q:"On which mountain did Jesus deliver the Sermon on the Mount?",a:["The Mount is unnamed","Mount Tabor","Mount Zion","Mount of Olives"],c:0,ref:"Matthew 5:1",ex:"The specific mountain is not named in Scripture."},
+    {q:"How many Beatitudes did Jesus teach?",a:["9","7","10","12"],c:0,ref:"Matthew 5:3-12",ex:"Nine Beatitudes in the Sermon on the Mount."},
+    {q:"Who is 'the salt of the earth' according to Jesus?",a:["His disciples","The Jews","The poor","The pure in heart"],c:0,ref:"Matthew 5:13",ex:"Jesus told his disciples they are the salt of the earth."},
+    {q:"How many loaves fed the five thousand?",a:["5","7","12","3"],c:0,ref:"Matthew 14:17",ex:"Five loaves and two fish."},
+    {q:"Who walked on water toward Jesus?",a:["Peter","John","James","Andrew"],c:0,ref:"Matthew 14:29",ex:"Peter stepped out of the boat but began to sink."},
+    {q:"At what confession did Jesus say 'On this rock I will build my Church'?",a:["Peter's confession that Jesus is the Christ","The Transfiguration","The Last Supper","The Great Commission"],c:0,ref:"Matthew 16:16-18",ex:"Following Peter's confession at Caesarea Philippi."},
+    {q:"How many times must we forgive, per Jesus's teaching to Peter?",a:["Seventy times seven","Seven","Seventy","Always once more"],c:0,ref:"Matthew 18:22",ex:"Signifying limitless forgiveness."},
+    {q:"What are the final words of Matthew's Gospel?",a:["I am with you always, even to the end of the age","Go and baptize all nations","Peace be with you","He is risen"],c:0,ref:"Matthew 28:20",ex:"The final words of the Great Commission."},
+  ],
+  John: [
+    {q:"What is the first miracle of Jesus recorded in John?",a:["Turning water into wine","Healing the nobleman's son","Feeding the 5000","Raising Lazarus"],c:0,ref:"John 2:1-11",ex:"At the wedding at Cana in Galilee."},
+    {q:"Who was the Pharisee who visited Jesus by night?",a:["Nicodemus","Joseph of Arimathea","Gamaliel","Simon"],c:0,ref:"John 3:1-2",ex:"Nicodemus came to Jesus by night to inquire."},
+    {q:"What did Jesus tell the Samaritan woman he would give her?",a:["Living water","Manna","Eternal life","Rest"],c:0,ref:"John 4:10",ex:"Living water that becomes a spring welling up to eternal life."},
+    {q:"Who did Jesus raise from the dead in Bethany?",a:["Lazarus","Jairus's daughter","The widow's son","Tabitha"],c:0,ref:"John 11:43-44",ex:"Lazarus had been dead four days."},
+    {q:"What is the shortest verse in the English Bible?",a:["Jesus wept","God is love","He is risen","Amen"],c:0,ref:"John 11:35",ex:"'Jesus wept' — two words in English."},
+    {q:"Who did Jesus wash the feet of at the Last Supper?",a:["His disciples","Only Peter","Only Judas","The women present"],c:0,ref:"John 13:5",ex:"Jesus washed the feet of all his disciples."},
+    {q:"Jesus said 'I am the way, the truth, and the...'?",a:["Life","Light","Door","Vine"],c:0,ref:"John 14:6",ex:"'No one comes to the Father except through me.'"},
+    {q:"Who did Jesus entrust His mother to from the cross?",a:["The beloved disciple","Peter","Joseph","James"],c:0,ref:"John 19:26-27",ex:"Traditionally identified as the Apostle John."},
+    {q:"Who first saw the risen Christ at the tomb?",a:["Mary Magdalene","Peter","John","The Virgin Mary"],c:0,ref:"John 20:14-16",ex:"Mary Magdalene was the first witness of the Resurrection."},
+    {q:"How many times did the risen Christ ask Peter 'Do you love me'?",a:["3","7","1","12"],c:0,ref:"John 21:15-17",ex:"Three times, mirroring Peter's three denials."},
+  ],
+  Acts: [
+    {q:"What happened at Pentecost?",a:["The Holy Spirit descended on the apostles","Jesus ascended","The Church was persecuted","Paul was converted"],c:0,ref:"Acts 2:1-4",ex:"Tongues as of fire rested on them and they spoke in other languages."},
+    {q:"How many people were added to the Church on Pentecost?",a:["3,000","500","120","5,000"],c:0,ref:"Acts 2:41",ex:"After Peter's sermon, about 3,000 were baptized."},
+    {q:"Who was the first Christian martyr?",a:["Stephen","James","Peter","Paul"],c:0,ref:"Acts 7:59-60",ex:"Stephen was stoned while praying for his killers."},
+    {q:"Who baptized the Ethiopian eunuch?",a:["Philip","Peter","Paul","Stephen"],c:0,ref:"Acts 8:38",ex:"Philip the evangelist, led by the Spirit."},
+    {q:"Where was Saul when he encountered the risen Christ?",a:["On the road to Damascus","In Jerusalem","At Antioch","On the road to Rome"],c:0,ref:"Acts 9:3-6",ex:"A light from heaven blinded him on the way to Damascus."},
+    {q:"Who was the first Gentile baptized?",a:["Cornelius","The Ethiopian eunuch","Sergius Paulus","Lydia"],c:0,ref:"Acts 10:48",ex:"Cornelius, a Roman centurion in Caesarea."},
+    {q:"Where were disciples first called 'Christians'?",a:["Antioch","Jerusalem","Rome","Ephesus"],c:0,ref:"Acts 11:26",ex:"The name was first used at Antioch in Syria."},
+    {q:"Who went on the first missionary journey with Paul?",a:["Barnabas","Silas","Timothy","Luke"],c:0,ref:"Acts 13:2",ex:"The Holy Spirit set apart Barnabas and Saul for the work."},
+    {q:"What was the result of the Jerusalem Council?",a:["Gentiles need not be circumcised","Circumcision was required","Paul was rejected","The Gospel was only for Jews"],c:0,ref:"Acts 15",ex:"The council decided Gentile Christians need not be circumcised."},
+    {q:"Where does the Book of Acts end?",a:["With Paul in Rome","With Paul's martyrdom","With Peter in Antioch","With the fall of Jerusalem"],c:0,ref:"Acts 28:30-31",ex:"Paul preaching the kingdom of God in Rome, under house arrest."},
+  ],
+  Romans: [
+    {q:"To whom is the Epistle to the Romans addressed?",a:["The Christians in Rome","The Jews in Rome","The Romans generally","The emperor"],c:0,ref:"Romans 1:7",ex:"'To all God's beloved in Rome, called to be saints.'"},
+    {q:"What is the righteousness of God revealed through?",a:["Faith","Works","The law","Circumcision"],c:0,ref:"Romans 1:17",ex:"'The righteous shall live by faith.'"},
+    {q:"According to Romans 3:23, all have what?",a:["Sinned and fallen short of the glory of God","Been saved","Received the law","Heard the gospel"],c:0,ref:"Romans 3:23",ex:"A foundational verse on universal human sinfulness."},
+    {q:"What are the wages of sin per Romans 6:23?",a:["Death","Guilt","Condemnation","Shame"],c:0,ref:"Romans 6:23",ex:"'But the gift of God is eternal life through Christ Jesus.'"},
+    {q:"Who does Paul say nothing can separate us from?",a:["The love of God in Christ","The Church","Our fellow believers","Our calling"],c:0,ref:"Romans 8:39",ex:"Neither death, life, angels, nor any created thing."},
+    {q:"What must we confess and believe to be saved per Romans 10:9?",a:["Jesus is Lord and God raised Him from the dead","The Ten Commandments","The Creed","The Lord's Prayer"],c:0,ref:"Romans 10:9",ex:"Confession with the mouth and belief in the heart."},
+    {q:"How are we to present our bodies per Romans 12:1?",a:["As a living sacrifice","As a temple","As a servant","As an offering of praise"],c:0,ref:"Romans 12:1",ex:"Holy and acceptable to God — our spiritual worship."},
+    {q:"To whom must Christians be subject per Romans 13?",a:["Governing authorities","Only the Church","Their elders","The emperor alone"],c:0,ref:"Romans 13:1",ex:"'The authorities that exist have been established by God.'"},
+    {q:"What is the kingdom of God per Romans 14:17?",a:["Righteousness, peace, and joy in the Holy Spirit","Food and drink","Laws and rituals","Power and wealth"],c:0,ref:"Romans 14:17",ex:"Not eating and drinking, but spiritual realities."},
+    {q:"How does Romans end its doxology?",a:["To the only wise God be glory forever","Amen come Lord Jesus","Grace and peace","The Lord be with you all"],c:0,ref:"Romans 16:27",ex:"'Through Jesus Christ, to whom be glory forever. Amen.'"},
+  ],
+};
+
+function getBookQuestions(book, n) {
+  const pool = BOOKS[book] || [];
+  const picked = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(n, pool.length));
+  return picked.map(q => {
+    const correct = q.a[q.c];
+    const shuffled = [...q.a].sort(() => Math.random() - 0.5);
+    return { ...q, a: shuffled, c: shuffled.indexOf(correct), cat: book };
+  });
+}
+
 function getQuestions(diff, n) {
   const pool = [...QB[diff]].sort(() => Math.random() - 0.5).slice(0, n);
   return pool.map(q => {
@@ -140,12 +238,13 @@ io.on('connection', (socket) => {
   console.log('connected:', socket.id);
 
   // ── CREATE ROOM ──────────────────────────────────────────────────────────
-  socket.on('create_room', ({ name, avatar, diff, mode }) => {
+  socket.on('create_room', ({ name, avatar, diff, mode, bibleBook }) => {
     const code = makeCode();
     rooms[code] = {
       code,
       hostId: socket.id,
       diff, mode,
+      bibleBook: bibleBook || null,
       phase: 'lobby',
       players: [{ id: socket.id, name, avatar, isHost: true }],
       scores: { [socket.id]: 0 },
@@ -158,7 +257,7 @@ io.on('connection', (socket) => {
     socket.join(code);
     socket.roomCode = code;
     socket.emit('room_created', { code, room: rooms[code] });
-    console.log(`Room ${code} created by ${name}`);
+    console.log(`Room ${code} created by ${name} (book: ${bibleBook || 'none'})`);
   });
 
   // ── JOIN ROOM ────────────────────────────────────────────────────────────
@@ -182,7 +281,9 @@ io.on('connection', (socket) => {
     const room = getRoom(code);
     if (!room || room.hostId !== socket.id) return;
 
-    room.questions = getQuestions(room.diff, 10);
+    room.questions = room.bibleBook 
+      ? getBookQuestions(room.bibleBook, 10) 
+      : getQuestions(room.diff, 10);
     room.phase = 'countdown';
     room.qIndex = 0;
     room.answeredIds = {};
@@ -313,12 +414,51 @@ io.on('connection', (socket) => {
     });
   });
 
+  // ── VOICE CHAT (WebRTC signaling) ────────────────────────────────────────
+  socket.on('voice_join', () => {
+    const code = socket.roomCode;
+    const room = getRoom(code);
+    if (!room) return;
+    socket.voiceEnabled = true;
+    // Notify others in room; they'll initiate peer connections
+    socket.to(code).emit('voice_peer_joined', { peerId: socket.id });
+    // Tell the new joiner who's already on voice
+    const existingVoice = room.players
+      .filter(p => p.id !== socket.id)
+      .map(p => p.id)
+      .filter(id => {
+        const s = io.sockets.sockets.get(id);
+        return s && s.voiceEnabled;
+      });
+    socket.emit('voice_existing_peers', { peerIds: existingVoice });
+  });
+
+  socket.on('voice_leave', () => {
+    const code = socket.roomCode;
+    if (!code) return;
+    socket.voiceEnabled = false;
+    socket.to(code).emit('voice_peer_left', { peerId: socket.id });
+  });
+
+  // WebRTC signaling relay (offer/answer/ice)
+  socket.on('voice_signal', ({ to, signal }) => {
+    const target = io.sockets.sockets.get(to);
+    if (target) {
+      target.emit('voice_signal', { from: socket.id, signal });
+    }
+  });
+
   // ── DISCONNECT ───────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     const code = socket.roomCode;
     if (!code) return;
     const room = getRoom(code);
     if (!room) return;
+
+    // Notify voice peers
+    if (socket.voiceEnabled) {
+      socket.to(code).emit('voice_peer_left', { peerId: socket.id });
+    }
 
     room.players = room.players.filter(p => p.id !== socket.id);
     if (room.players.length === 0) {

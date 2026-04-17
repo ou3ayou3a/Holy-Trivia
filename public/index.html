@@ -149,6 +149,15 @@ input::placeholder{color:rgba(255,255,255,.2)}
 #music-btn:hover{border-color:rgba(232,200,74,.5);background:rgba(232,200,74,.08)}
 #music-btn.playing{border-color:rgba(232,200,74,.5);animation:musicPulse 2s ease infinite}
 @keyframes musicPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,200,74,.3)}50%{box-shadow:0 0 0 8px rgba(232,200,74,0)}}
+
+/* ── VOICE CHAT ── */
+#voice-btn{position:fixed;bottom:20px;left:76px;z-index:500;background:rgba(10,6,8,.9);border:1px solid rgba(232,200,74,.2);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;transition:all .2s;color:#e8c84a}
+#voice-btn:hover{border-color:rgba(232,200,74,.5);background:rgba(232,200,74,.08)}
+#voice-btn.active{border-color:#50c878;background:rgba(80,200,120,.12);color:#50c878;animation:voicePulse 2s ease infinite}
+@keyframes voicePulse{0%,100%{box-shadow:0 0 0 0 rgba(80,200,120,.3)}50%{box-shadow:0 0 0 8px rgba(80,200,120,0)}}
+#mute-btn{position:fixed;bottom:20px;left:132px;z-index:500;background:rgba(10,6,8,.9);border:1px solid rgba(232,200,74,.2);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;transition:all .2s;color:#e8c84a}
+#mute-btn:hover{border-color:rgba(232,200,74,.5);background:rgba(232,200,74,.08)}
+#mute-btn.hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -199,6 +208,18 @@ input::placeholder{color:rgba(255,255,255,.2)}
       <div class="diff-card" id="diff-medium" onclick="selDiff('medium')"><div class="diff-icon">📖</div><div class="diff-name">Medium</div><div class="diff-label">Occasional Reader</div></div>
       <div class="diff-card" id="diff-hard" onclick="selDiff('hard')"><div class="diff-icon">🔥</div><div class="diff-name">Hard</div><div class="diff-label">Hardcore Fanatic</div></div>
     </div>
+    <label class="label">📚 Bible Study Mode (Optional)</label>
+    <div style="font-size:.78rem;color:rgba(255,255,255,.4);font-style:italic;margin-bottom:8px">Focus your quiz on one specific book of the Bible</div>
+    <select id="bible-book-sel" onchange="selBook(this.value)" style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:2px;color:#e8dfc0;font-family:'Crimson Pro',serif;font-size:1rem;padding:10px 16px;outline:none;margin-bottom:16px;cursor:pointer">
+      <option value="">— No specific book (use all questions) —</option>
+      <option value="Genesis">📜 Genesis</option>
+      <option value="Exodus">📜 Exodus</option>
+      <option value="Psalms">🎵 Psalms</option>
+      <option value="Matthew">✝️ Matthew</option>
+      <option value="John">✝️ John</option>
+      <option value="Acts">🔥 Acts</option>
+      <option value="Romans">✉️ Romans</option>
+    </select>
     <label class="label">Game Mode</label>
     <div class="mode-grid">
       <div class="mode-card" id="mode-buzzer" onclick="selMode('buzzer')"><div class="mode-icon">🔔</div><div class="mode-name">Fast Buzzer</div><div class="mode-desc">First to buzz in. Wrong = -2 pts!</div></div>
@@ -305,7 +326,7 @@ const socket = io();
 // ── STATE ───────────────────────────────────────────────────────────────────
 const S = {
   name:'', avatar:'✝️', roomCode:'', isHost:false,
-  diff:'easy', mode:'simultaneous',
+  diff:'easy', mode:'simultaneous', bibleBook:'',
   questions:[], qIndex:0, currentQ:null,
   myAnswer:null, showResult:false,
   timeLeft:20, timerInterval:null,
@@ -353,6 +374,19 @@ function pickAvatar(el,av){
 }
 function selDiff(d){S.diff=d;['easy','medium','hard'].forEach(x=>{const el=document.getElementById('diff-'+x);el.className='diff-card';if(x===d)el.classList.add('sel-'+x);});}
 function selMode(m){S.mode=m;['buzzer','simultaneous','turnbased','kahoot'].forEach(x=>{const el=document.getElementById('mode-'+x);el.className='mode-card';if(x===m)el.classList.add('sel-mode');});}
+function selBook(b){
+  S.bibleBook=b;
+  const diffGrid=document.querySelector('.diff-grid');
+  if(b){
+    // Bible Study mode active - dim the difficulty selector
+    diffGrid.style.opacity='0.4';
+    diffGrid.style.pointerEvents='none';
+    toast('📚 Bible Study mode: '+b);
+  } else {
+    diffGrid.style.opacity='1';
+    diffGrid.style.pointerEvents='auto';
+  }
+}
 function show(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   document.getElementById('screen-'+name).classList.remove('hidden');
@@ -413,6 +447,9 @@ socket.on('countdown_tick',(n)=>{
   el.textContent=n>0?n:'GO!';
   el.style.animation='none';
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.style.animation=''; }));
+  // Play countdown sound
+  if(n>0) playTick();
+  else playGoChime();
 });
 
 socket.on('question_start',({qIndex,question,scores,players})=>{
@@ -466,7 +503,7 @@ socket.on('game_over',({scores,players})=>{
 
 // ── CREATE / JOIN ────────────────────────────────────────────────────────────
 function createRoom(){
-  socket.emit('create_room',{name:S.name,avatar:S.avatar,diff:S.diff,mode:S.mode});
+  socket.emit('create_room',{name:S.name,avatar:S.avatar,diff:S.diff,mode:S.mode,bibleBook:S.bibleBook});
 }
 function doJoin(){
   const code=document.getElementById('join-code').value.toUpperCase().trim();
@@ -490,11 +527,19 @@ function pressBuzzer(){
 // ── RENDER LOBBY ─────────────────────────────────────────────────────────────
 function renderLobby(code,room){
   document.getElementById('lobby-code').textContent=code;
-  const badgeCls={easy:'badge-easy',medium:'badge-med',hard:'badge-hard'}[room.diff||S.diff];
-  document.getElementById('lobby-badges').innerHTML=
-    `<span class="badge ${badgeCls}">${DIFF_LABELS[room.diff||S.diff]}</span>`+
-    `<span class="tag">${MODE_NAMES[room.mode||S.mode]}</span>`+
-    `<span class="tag">10 Questions</span>`;
+  const book=room.bibleBook;
+  if(book){
+    document.getElementById('lobby-badges').innerHTML=
+      `<span class="badge badge-med">📚 Bible Study: ${book}</span>`+
+      `<span class="tag">${MODE_NAMES[room.mode||S.mode]}</span>`+
+      `<span class="tag">10 Questions</span>`;
+  } else {
+    const badgeCls={easy:'badge-easy',medium:'badge-med',hard:'badge-hard'}[room.diff||S.diff];
+    document.getElementById('lobby-badges').innerHTML=
+      `<span class="badge ${badgeCls}">${DIFF_LABELS[room.diff||S.diff]}</span>`+
+      `<span class="tag">${MODE_NAMES[room.mode||S.mode]}</span>`+
+      `<span class="tag">10 Questions</span>`;
+  }
   renderLobbyPlayers(room.players||[]);
   if(S.isHost){
     document.getElementById('lobby-host-btn').style.display='block';
@@ -613,9 +658,16 @@ function showResultUI(correctIdx,reference,explanation,answeredIds){
   const taunt=taunts[Math.floor(Math.random()*taunts.length)];
   const timeout=TIMEOUT_TAUNTS[Math.floor(Math.random()*TIMEOUT_TAUNTS.length)];
   let resultText='';
-  if(S.myAnswer===correctIdx) resultText='✅ Correct! The answer is: ';
-  else if(S.myAnswer===-1||S.myAnswer===null) resultText=timeout;
-  else resultText='❌ Wrong! '+taunt+'<br><span style="font-size:.8rem;opacity:.7">Correct answer:</span> ';
+  if(S.myAnswer===correctIdx){
+    resultText='✅ Correct! The answer is: ';
+    playCorrectChime();
+  } else if(S.myAnswer===-1||S.myAnswer===null){
+    resultText=timeout;
+    playThunder();
+  } else {
+    resultText='❌ Wrong! '+taunt+'<br><span style="font-size:.8rem;opacity:.7">Correct answer:</span> ';
+    playThunder();
+  }
   document.getElementById('verse-result').innerHTML=resultText+'<strong style="color:#80e880">'+q.a[correctIdx]+'</strong>';
   document.getElementById('verse-expl').textContent=explanation||'';
   document.getElementById('players-answered').classList.add('hidden');
@@ -810,6 +862,236 @@ socket.on('chat_message', ({ name, avatar, text }) => {
 
 // Show chat when in lobby/game — integrated into original show()
 
+// ── SOUND EFFECTS (Web Audio API — no files needed!) ────────────────────────
+let audioCtx = null;
+function getCtx(){
+  if(!audioCtx){
+    try { audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+    catch(e){ return null; }
+  }
+  return audioCtx;
+}
+
+function playTick(){
+  const ctx=getCtx(); if(!ctx) return;
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type='sine'; o.frequency.value=880;
+  g.gain.setValueAtTime(0.15, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.15);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(); o.stop(ctx.currentTime+0.15);
+}
+
+function playGoChime(){
+  const ctx=getCtx(); if(!ctx) return;
+  [523.25, 659.25, 783.99].forEach((f, i) => {
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type='triangle'; o.frequency.value=f;
+    const t=ctx.currentTime+i*0.08;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.2, t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.4);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t+0.4);
+  });
+}
+
+function playCorrectChime(){
+  const ctx=getCtx(); if(!ctx) return;
+  [659.25, 830.61].forEach((f, i) => {
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type='sine'; o.frequency.value=f;
+    const t=ctx.currentTime+i*0.1;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.15, t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.3);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t+0.3);
+  });
+}
+
+function playThunder(){
+  const ctx=getCtx(); if(!ctx) return;
+  // Rumble: filtered noise
+  const bufferSize = 2 * ctx.sampleRate;
+  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+  
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuffer;
+  
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(400, ctx.currentTime);
+  filter.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 1.5);
+  
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.45, ctx.currentTime + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+  
+  noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+  noise.start();
+  noise.stop(ctx.currentTime + 1.5);
+  
+  // Crack: short high-freq hit
+  const crack = ctx.createOscillator();
+  const crackGain = ctx.createGain();
+  crack.type = 'sawtooth';
+  crack.frequency.setValueAtTime(200, ctx.currentTime);
+  crack.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.15);
+  crackGain.gain.setValueAtTime(0.3, ctx.currentTime);
+  crackGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+  crack.connect(crackGain); crackGain.connect(ctx.destination);
+  crack.start(); crack.stop(ctx.currentTime + 0.15);
+}
+
+// ── VOICE CHAT (WebRTC) ─────────────────────────────────────────────────────
+const peers = {}; // peerId -> RTCPeerConnection
+const peerAudios = {}; // peerId -> <audio> element
+let localStream = null;
+let voiceOn = false;
+let micMuted = false;
+
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ]
+};
+
+async function toggleVoice(){
+  if (voiceOn) {
+    // Leave voice
+    for (const id in peers) { peers[id].close(); delete peers[id]; }
+    for (const id in peerAudios) { peerAudios[id].remove(); delete peerAudios[id]; }
+    if (localStream) {
+      localStream.getTracks().forEach(t => t.stop());
+      localStream = null;
+    }
+    voiceOn = false;
+    socket.emit('voice_leave');
+    updateVoiceUI();
+    toast('🎙️ Left voice chat');
+    return;
+  }
+  
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    voiceOn = true;
+    socket.emit('voice_join');
+    updateVoiceUI();
+    toast('🎙️ Joined voice chat');
+  } catch (e) {
+    toast('Microphone access denied');
+    console.error(e);
+  }
+}
+
+function toggleMute(){
+  if (!voiceOn || !localStream) return;
+  micMuted = !micMuted;
+  localStream.getAudioTracks().forEach(t => t.enabled = !micMuted);
+  updateVoiceUI();
+}
+
+function updateVoiceUI(){
+  const btn = document.getElementById('voice-btn');
+  const muteBtn = document.getElementById('mute-btn');
+  if (voiceOn) {
+    btn.textContent = '📞';
+    btn.classList.add('active');
+    btn.title = 'Leave voice chat';
+    muteBtn.classList.remove('hidden');
+    muteBtn.textContent = micMuted ? '🔇' : '🎤';
+    muteBtn.title = micMuted ? 'Unmute mic' : 'Mute mic';
+  } else {
+    btn.textContent = '🎤';
+    btn.classList.remove('active');
+    btn.title = 'Join voice chat';
+    muteBtn.classList.add('hidden');
+  }
+}
+
+async function createPeer(peerId, initiator){
+  const pc = new RTCPeerConnection(RTC_CONFIG);
+  peers[peerId] = pc;
+  
+  // Add local audio track
+  if (localStream) {
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  }
+  
+  // Handle remote stream
+  pc.ontrack = (e) => {
+    let audio = peerAudios[peerId];
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.autoplay = true;
+      audio.id = 'peer-audio-' + peerId;
+      document.body.appendChild(audio);
+      peerAudios[peerId] = audio;
+    }
+    audio.srcObject = e.streams[0];
+  };
+  
+  // ICE candidate exchange
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      socket.emit('voice_signal', {
+        to: peerId,
+        signal: { type: 'ice', candidate: e.candidate }
+      });
+    }
+  };
+  
+  if (initiator) {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('voice_signal', { to: peerId, signal: { type: 'offer', sdp: offer } });
+  }
+  
+  return pc;
+}
+
+socket.on('voice_existing_peers', async ({ peerIds }) => {
+  // I just joined, connect to everyone already on voice
+  for (const id of peerIds) {
+    await createPeer(id, true);
+  }
+});
+
+socket.on('voice_peer_joined', async ({ peerId }) => {
+  // New peer joined; they'll send me an offer, no action needed yet
+  console.log('Peer joined voice:', peerId);
+});
+
+socket.on('voice_peer_left', ({ peerId }) => {
+  if (peers[peerId]) { peers[peerId].close(); delete peers[peerId]; }
+  if (peerAudios[peerId]) { peerAudios[peerId].remove(); delete peerAudios[peerId]; }
+});
+
+socket.on('voice_signal', async ({ from, signal }) => {
+  if (!voiceOn) return;
+  let pc = peers[from];
+  
+  if (signal.type === 'offer') {
+    if (!pc) pc = await createPeer(from, false);
+    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.emit('voice_signal', { to: from, signal: { type: 'answer', sdp: answer } });
+  } else if (signal.type === 'answer') {
+    if (pc) await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+  } else if (signal.type === 'ice') {
+    if (pc) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(signal.candidate)); }
+      catch (e) { console.error('ICE error:', e); }
+    }
+  }
+});
+
 // ── MUSIC ──────────────────────────────────────────────────────────────────────
 // Free royalty-free Byzantine chant from Internet Archive / Wikimedia Commons
 const TRACKS = [
@@ -876,6 +1158,10 @@ init();
 
 <!-- MUSIC BUTTON -->
 <button id="music-btn" onclick="toggleMusic()" title="Toggle Orthodox music">🎵</button>
+
+<!-- VOICE CHAT BUTTONS -->
+<button id="voice-btn" onclick="toggleVoice()" title="Join voice chat">🎤</button>
+<button id="mute-btn" onclick="toggleMute()" class="hidden" title="Mute mic">🎤</button>
 
 </body>
 </html>
