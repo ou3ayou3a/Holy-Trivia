@@ -1663,6 +1663,153 @@ app.get('/api/users/:id', (req, res) => {
   }
 });
 
+// ─── ADMIN DASHBOARD ────────────────────────────────────────────────────────
+// Protected by ADMIN_PASSWORD env var. Sets a separate "hta" cookie.
+
+function isAdmin(req) {
+  const adminCookie = req.cookies?.hta;
+  if (!adminCookie || !process.env.ADMIN_PASSWORD) return false;
+  // Admin cookie is bcrypt hash of password — verify it matches
+  try {
+    return bcrypt.compareSync(process.env.ADMIN_PASSWORD, adminCookie);
+  } catch (e) { return false; }
+}
+
+// Admin login
+app.post('/api/admin/login', async (req, res) => {
+  if (!process.env.ADMIN_PASSWORD) {
+    return res.status(503).json({ error: 'Admin not configured. Set ADMIN_PASSWORD env var.' });
+  }
+  const { password } = req.body;
+  if (typeof password !== 'string' || password !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Wrong password' });
+  }
+  // Set admin cookie (bcrypt hash of password as token, valid 7 days)
+  const token = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+  res.cookie('hta', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV !== 'development',
+    sameSite: 'lax',
+    maxAge: 7 * 86400000,
+    path: '/',
+  });
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  res.clearCookie('hta', { path: '/' });
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/me', (req, res) => {
+  res.json({ admin: isAdmin(req) });
+});
+
+// Admin stats endpoint
+app.get('/api/admin/stats', (req, res) => {
+  if (!isAdmin(req)) return res.status(401).json({ error: 'Admin only' });
+  
+  try {
+    const now = Date.now();
+    const day = 86400000;
+    
+    // User counts
+    const totalUsers = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
+    const usersWithGoogle = db.prepare('SELECT COUNT(*) as c FROM users WHERE google_id IS NOT NULL').get().c;
+    const usersWithPassword = db.prepare('SELECT COUNT(*) as c FROM users WHERE password_hash IS NOT NULL').get().c;
+    const newToday = db.prepare('SELECT COUNT(*) as c FROM users WHERE created_at > ?').get(now - day).c;
+    const newWeek = db.prepare('SELECT COUNT(*) as c FROM users WHERE created_at > ?').get(now - 7 * day).c;
+    const newMonth = db.prepare('SELECT COUNT(*) as c FROM users WHERE created_at > ?').get(now - 30 * day).c;
+    
+    // Active users
+    const active24h = db.prepare('SELECT COUNT(*) as c FROM users WHERE last_login_at > ?').get(now - day).c;
+    const active7d = db.prepare('SELECT COUNT(*) as c FROM users WHERE last_login_at > ?').get(now - 7 * day).c;
+    const active30d = db.prepare('SELECT COUNT(*) as c FROM users WHERE last_login_at > ?').get(now - 30 * day).c;
+    
+    // Sessions
+    const activeSessions = db.prepare('SELECT COUNT(*) as c FROM sessions WHERE expires_at > ?').get(now).c;
+    
+    // Debates
+    const totalDebates = db.prepare('SELECT COUNT(*) as c FROM saved_debates').get().c;
+    const debatesByOutcome = db.prepare('SELECT outcome, COUNT(*) as c FROM saved_debates GROUP BY outcome').all();
+    const debatesToday = db.prepare('SELECT COUNT(*) as c FROM saved_debates WHERE created_at > ?').get(now - day).c;
+    const debatesWeek = db.prepare('SELECT COUNT(*) as c FROM saved_debates WHERE created_at > ?').get(now - 7 * day).c;
+    
+    // Top opponents
+    const topOpponents = db.prepare(`
+      SELECT opponent_name, opponent_icon, COUNT(*) as c 
+      FROM saved_debates GROUP BY opponent_id ORDER BY c DESC LIMIT 8
+    `).all();
+    
+    // Top denominations
+    const topDenominations = db.prepare(`
+      SELECT denomination_name, COUNT(*) as c 
+      FROM saved_debates GROUP BY denomination ORDER BY c DESC LIMIT 5
+    `).all();
+    
+    // Recent users
+    const recentUsers = db.prepare(`
+      SELECT id, display_name, avatar, email, created_at, last_login_at,
+        (CASE WHEN google_id IS NOT NULL THEN 1 ELSE 0 END) as has_google
+      FROM users ORDER BY created_at DESC LIMIT 20
+    `).all();
+    
+    // Top players (by debates played)
+    const topPlayers = db.prepare(`
+      SELECT u.id, u.display_name, u.avatar, s.debate_total, s.debate_wins, s.debate_score_total
+      FROM user_stats s JOIN users u ON u.id = s.user_id
+      WHERE s.debate_total > 0
+      ORDER BY s.debate_total DESC LIMIT 10
+    `).all();
+    
+    // Daily signup chart (last 14 days)
+    const signupChart = [];
+    for (let i = 13; i >= 0; i--) {
+      const dayStart = now - (i + 1) * day;
+      const dayEnd = now - i * day;
+      const count = db.prepare('SELECT COUNT(*) as c FROM users WHERE created_at >= ? AND created_at < ?').get(dayStart, dayEnd).c;
+      const date = new Date(dayEnd - day);
+      signupChart.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        count,
+      });
+    }
+    
+    res.json({
+      users: {
+        total: totalUsers,
+        withGoogle: usersWithGoogle,
+        withPassword: usersWithPassword,
+        bothMethods: usersWithGoogle + usersWithPassword - totalUsers, // overlap
+        newToday, newWeek, newMonth,
+      },
+      activity: {
+        active24h, active7d, active30d,
+        activeSessions,
+      },
+      debates: {
+        total: totalDebates,
+        today: debatesToday,
+        week: debatesWeek,
+        byOutcome: debatesByOutcome,
+        topOpponents,
+        topDenominations,
+      },
+      recentUsers,
+      topPlayers,
+      signupChart,
+    });
+  } catch (err) {
+    console.error('Admin stats error:', err);
+    res.status(500).json({ error: 'Failed to load stats' });
+  }
+});
+
+// Serve admin page
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 // ─── Start server ───────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
