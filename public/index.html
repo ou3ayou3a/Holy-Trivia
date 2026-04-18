@@ -248,9 +248,108 @@ input::placeholder{color:rgba(255,255,255,.2)}
   .debate-msg-body{max-width:85%}
   .opp-grid{grid-template-columns:1fr}
 }
+
+/* ─── AUTH UI ─── */
+.user-badge{position:fixed;top:14px;right:14px;display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,0,0,.6);border:1px solid rgba(232,200,74,.3);border-radius:2px;cursor:pointer;z-index:50;backdrop-filter:blur(8px);transition:all .15s;font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.05em;color:#e8dfc0}
+.user-badge:hover{border-color:rgba(232,200,74,.6);background:rgba(0,0,0,.75)}
+.user-badge .ub-avatar{font-size:1.3rem;line-height:1}
+.user-badge .ub-name{max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-badge.guest{color:rgba(232,200,74,.7)}
+.user-menu{position:fixed;top:50px;right:14px;min-width:220px;background:#0a0a0a;border:1px solid rgba(232,200,74,.4);border-radius:2px;z-index:51;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.user-menu button{display:block;width:100%;text-align:left;padding:10px 12px;background:transparent;border:none;color:#e8dfc0;font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.05em;cursor:pointer;border-radius:2px;transition:background .12s}
+.user-menu button:hover{background:rgba(232,200,74,.1);color:#e8c84a}
+.user-menu .um-divider{height:1px;background:rgba(232,200,74,.15);margin:4px 0}
+.user-menu .um-info{padding:10px 12px;font-family:'Crimson Pro',serif;font-size:.78rem;color:rgba(232,223,192,.6);font-style:italic;border-bottom:1px solid rgba(232,200,74,.15);margin-bottom:4px}
+
+/* Auth modal */
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px)}
+.auth-modal{background:linear-gradient(180deg,#0d0d0d,#080808);border:1px solid rgba(232,200,74,.3);border-radius:3px;padding:28px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(232,200,74,.15)}
+.auth-modal h2{font-family:'Cinzel Decorative',serif;color:#e8c84a;font-size:1.5rem;text-align:center;margin:0 0 4px}
+.auth-modal .auth-sub{text-align:center;font-family:'Crimson Pro',serif;color:rgba(232,223,192,.6);font-style:italic;font-size:.95rem;margin-bottom:20px}
+.auth-modal .auth-tabs{display:flex;border-bottom:1px solid rgba(232,200,74,.2);margin-bottom:16px}
+.auth-modal .auth-tab{flex:1;padding:10px;background:transparent;border:none;color:rgba(232,223,192,.5);font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.auth-modal .auth-tab.active{color:#e8c84a;border-bottom-color:#e8c84a}
+.auth-modal .auth-tab:hover:not(.active){color:#e8dfc0}
+.auth-modal input{width:100%;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#e8dfc0;font-family:'Crimson Pro',serif;font-size:1rem;margin-bottom:10px;border-radius:2px;box-sizing:border-box}
+.auth-modal input:focus{outline:none;border-color:rgba(232,200,74,.5)}
+.auth-modal .auth-error{color:#e85050;font-family:'Crimson Pro',serif;font-size:.85rem;font-style:italic;margin:8px 0;text-align:center;min-height:1.2em}
+.auth-modal .auth-divider{display:flex;align-items:center;gap:10px;margin:16px 0;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.15em;color:rgba(232,200,74,.4);text-transform:uppercase}
+.auth-modal .auth-divider::before,.auth-modal .auth-divider::after{content:'';flex:1;height:1px;background:rgba(232,200,74,.2)}
+.auth-modal .auth-close{position:absolute;top:14px;right:18px;background:none;border:none;color:rgba(232,223,192,.4);font-size:1.6rem;cursor:pointer;line-height:1}
+.auth-modal .auth-close:hover{color:#e8dfc0}
+.auth-modal .auth-avatar-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-bottom:10px}
+.auth-modal .auth-avatar-opt{padding:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:2px;cursor:pointer;text-align:center;font-size:1.2rem;transition:all .12s}
+.auth-modal .auth-avatar-opt:hover{background:rgba(232,200,74,.1)}
+.auth-modal .auth-avatar-opt.selected{background:rgba(232,200,74,.2);border-color:#e8c84a}
+.google-btn-wrap{display:flex;justify-content:center;margin:8px 0}
+.guest-link{display:block;text-align:center;margin-top:14px;font-family:'Crimson Pro',serif;font-size:.85rem;color:rgba(232,223,192,.5);text-decoration:underline;cursor:pointer;font-style:italic}
+.guest-link:hover{color:#e8dfc0}
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+
+<!-- USER BADGE (top-right, always visible) -->
+<div id="user-badge" class="user-badge guest hidden" onclick="toggleUserMenu()">
+  <span class="ub-avatar" id="ub-avatar">👤</span>
+  <span class="ub-name" id="ub-name">Sign In</span>
+</div>
+<div id="user-menu" class="user-menu hidden"></div>
+
+<!-- AUTH MODAL -->
+<div id="auth-overlay" class="auth-overlay hidden" onclick="if(event.target.id==='auth-overlay')closeAuth()">
+  <div class="auth-modal" style="position:relative">
+    <button class="auth-close" onclick="closeAuth()">×</button>
+    <h2 id="auth-title">Welcome</h2>
+    <div class="auth-sub" id="auth-sub">✦ Sign in to save across devices ✦</div>
+    
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Log In</button>
+      <button class="auth-tab" id="auth-tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+    
+    <!-- LOGIN -->
+    <div id="auth-pane-login">
+      <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+      <div class="auth-error" id="login-error"></div>
+      <button class="btn btn-gold" onclick="doLogin()" style="margin-top:0">Log In</button>
+      <div class="auth-divider">or</div>
+      <div class="google-btn-wrap" id="google-btn-login"></div>
+      <div id="google-login-fallback" class="hidden" style="text-align:center;font-family:'Crimson Pro',serif;color:rgba(232,223,192,.5);font-size:.85rem;font-style:italic">Google sign-in not available</div>
+    </div>
+    
+    <!-- SIGNUP -->
+    <div id="auth-pane-signup" class="hidden">
+      <input type="text" id="signup-name" placeholder="Display Name" maxlength="50">
+      <label class="label" style="font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.1em;color:rgba(232,200,74,.5);margin:6px 0 4px;display:block">Choose Avatar</label>
+      <div class="auth-avatar-grid" id="signup-avatar-grid"></div>
+      <input type="email" id="signup-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="signup-password" placeholder="Password (min 8 chars)" autocomplete="new-password">
+      <div class="auth-error" id="signup-error"></div>
+      <button class="btn btn-gold" onclick="doSignup()" style="margin-top:0">Create Account</button>
+      <div class="auth-divider">or</div>
+      <div class="google-btn-wrap" id="google-btn-signup"></div>
+      <div id="google-signup-fallback" class="hidden" style="text-align:center;font-family:'Crimson Pro',serif;color:rgba(232,223,192,.5);font-size:.85rem;font-style:italic">Google sign-in not available</div>
+    </div>
+    
+    <a class="guest-link" onclick="closeAuth()">Continue as guest →</a>
+  </div>
+</div>
+
+<!-- PROFILE EDIT MODAL -->
+<div id="profile-overlay" class="auth-overlay hidden" onclick="if(event.target.id==='profile-overlay')closeProfile()">
+  <div class="auth-modal" style="position:relative">
+    <button class="auth-close" onclick="closeProfile()">×</button>
+    <h2>Edit Profile</h2>
+    <div class="auth-sub">✦ Update your display name and avatar ✦</div>
+    <input type="text" id="profile-name" placeholder="Display Name" maxlength="50">
+    <label class="label" style="font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.1em;color:rgba(232,200,74,.5);margin:6px 0 4px;display:block">Avatar</label>
+    <div class="auth-avatar-grid" id="profile-avatar-grid"></div>
+    <div class="auth-error" id="profile-error"></div>
+    <button class="btn btn-gold" onclick="doSaveProfile()" style="margin-top:0">Save</button>
+  </div>
+</div>
 
 <!-- HOME -->
 <div id="screen-home" class="page">
@@ -1998,6 +2097,319 @@ endDebate = function(reason) {
   autoSaveDebate(reason);
   _origEndDebate(reason);
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// ─── AUTH SYSTEM ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+
+const AUTH = {
+  user: null,           // logged-in user object, or null
+  googleEnabled: false,
+  googleClientId: null,
+  signupAvatar: '✝️',
+  profileAvatar: '✝️',
+  menuOpen: false,
+};
+
+const AUTH_AVATARS = ['✝️','☦️','⛪','🕊️','📖','🙏','✨','👑','🛐','📿','🕯️','🌿','🦁','🐟','🦅','⚓'];
+
+async function loadAuthConfig() {
+  try {
+    const res = await fetch('/api/auth/config');
+    const data = await res.json();
+    AUTH.googleEnabled = !!data.googleEnabled;
+    AUTH.googleClientId = data.googleClientId;
+  } catch (e) {
+    console.error('Auth config load failed', e);
+  }
+}
+
+async function refreshUser() {
+  try {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    AUTH.user = data.user || null;
+  } catch (e) {
+    AUTH.user = null;
+  }
+  renderUserBadge();
+}
+
+function renderUserBadge() {
+  const badge = document.getElementById('user-badge');
+  const av = document.getElementById('ub-avatar');
+  const nm = document.getElementById('ub-name');
+  badge.classList.remove('hidden');
+  if (AUTH.user) {
+    badge.classList.remove('guest');
+    av.textContent = AUTH.user.avatar || '✝️';
+    nm.textContent = AUTH.user.displayName || 'User';
+  } else {
+    badge.classList.add('guest');
+    av.textContent = '👤';
+    nm.textContent = 'Sign In';
+  }
+}
+
+function toggleUserMenu() {
+  if (!AUTH.user) {
+    openAuth();
+    return;
+  }
+  AUTH.menuOpen = !AUTH.menuOpen;
+  const menu = document.getElementById('user-menu');
+  if (!AUTH.menuOpen) { menu.classList.add('hidden'); return; }
+  
+  menu.innerHTML = `
+    <div class="um-info">${AUTH.user.avatar} ${escapeHtml(AUTH.user.displayName)}<br><span style="font-size:.7rem;opacity:.7">${escapeHtml(AUTH.user.email)}</span></div>
+    <button onclick="openProfile()">✎ Edit Profile</button>
+    <button onclick="goSavedDebatesFromMenu()">📚 My Saved Debates</button>
+    <div class="um-divider"></div>
+    <button onclick="doLogout()" style="color:#e85050">→ Sign Out</button>
+  `;
+  menu.classList.remove('hidden');
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+  if (!AUTH.menuOpen) return;
+  if (e.target.closest('#user-badge') || e.target.closest('#user-menu')) return;
+  AUTH.menuOpen = false;
+  document.getElementById('user-menu').classList.add('hidden');
+});
+
+function goSavedDebatesFromMenu() {
+  AUTH.menuOpen = false;
+  document.getElementById('user-menu').classList.add('hidden');
+  if (typeof goSavedDebates === 'function') goSavedDebates();
+}
+
+// ─── AUTH MODAL ─────────────────────────────────────────────────────────────
+function openAuth(mode) {
+  document.getElementById('auth-overlay').classList.remove('hidden');
+  switchAuthTab(mode || 'login');
+  renderSignupAvatars();
+  renderGoogleButtons();
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('signup-error').textContent = '';
+}
+
+function closeAuth() {
+  document.getElementById('auth-overlay').classList.add('hidden');
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('auth-tab-signup').classList.toggle('active', tab === 'signup');
+  document.getElementById('auth-pane-login').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('auth-pane-signup').classList.toggle('hidden', tab !== 'signup');
+  document.getElementById('auth-title').textContent = tab === 'signup' ? 'Create Account' : 'Welcome Back';
+  document.getElementById('auth-sub').textContent = tab === 'signup' 
+    ? '✦ Save your debates and stats forever ✦'
+    : '✦ Sign in to access your saved debates ✦';
+}
+
+function renderSignupAvatars() {
+  const grid = document.getElementById('signup-avatar-grid');
+  grid.innerHTML = AUTH_AVATARS.map(a => 
+    `<div class="auth-avatar-opt ${a===AUTH.signupAvatar?'selected':''}" data-av="${a}" onclick="selectSignupAvatar('${a}')">${a}</div>`
+  ).join('');
+}
+
+function selectSignupAvatar(a) {
+  AUTH.signupAvatar = a;
+  renderSignupAvatars();
+}
+
+function renderProfileAvatars() {
+  const grid = document.getElementById('profile-avatar-grid');
+  grid.innerHTML = AUTH_AVATARS.map(a => 
+    `<div class="auth-avatar-opt ${a===AUTH.profileAvatar?'selected':''}" data-av="${a}" onclick="selectProfileAvatar('${a}')">${a}</div>`
+  ).join('');
+}
+
+function selectProfileAvatar(a) {
+  AUTH.profileAvatar = a;
+  renderProfileAvatars();
+}
+
+// ─── EMAIL/PASSWORD AUTH ────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  
+  if (!email || !password) { errEl.textContent = 'Email and password required'; return; }
+  
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, guestToken: getUserToken() }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Login failed'; return; }
+    AUTH.user = data.user;
+    closeAuth();
+    renderUserBadge();
+    toast(`✦ Welcome back, ${data.user.displayName}`);
+  } catch (e) {
+    errEl.textContent = 'Connection error';
+  }
+}
+
+async function doSignup() {
+  const displayName = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const errEl = document.getElementById('signup-error');
+  errEl.textContent = '';
+  
+  if (!displayName) { errEl.textContent = 'Display name required'; return; }
+  if (!email) { errEl.textContent = 'Email required'; return; }
+  if (password.length < 8) { errEl.textContent = 'Password must be at least 8 characters'; return; }
+  
+  try {
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        email, password, displayName, 
+        avatar: AUTH.signupAvatar,
+        guestToken: getUserToken(),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Signup failed'; return; }
+    AUTH.user = data.user;
+    closeAuth();
+    renderUserBadge();
+    toast(`✦ Welcome, ${data.user.displayName}!`);
+  } catch (e) {
+    errEl.textContent = 'Connection error';
+  }
+}
+
+async function doLogout() {
+  AUTH.menuOpen = false;
+  document.getElementById('user-menu').classList.add('hidden');
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (e) {}
+  AUTH.user = null;
+  renderUserBadge();
+  toast('Signed out');
+}
+
+// ─── GOOGLE SIGN-IN ─────────────────────────────────────────────────────────
+function renderGoogleButtons() {
+  const fallback1 = document.getElementById('google-login-fallback');
+  const fallback2 = document.getElementById('google-signup-fallback');
+  
+  if (!AUTH.googleEnabled || !AUTH.googleClientId) {
+    fallback1.classList.remove('hidden');
+    fallback2.classList.remove('hidden');
+    return;
+  }
+  fallback1.classList.add('hidden');
+  fallback2.classList.add('hidden');
+  
+  // Wait for Google library
+  if (typeof google === 'undefined' || !google.accounts) {
+    setTimeout(renderGoogleButtons, 200);
+    return;
+  }
+  
+  google.accounts.id.initialize({
+    client_id: AUTH.googleClientId,
+    callback: handleGoogleCredential,
+  });
+  
+  // Render in both panes
+  ['google-btn-login', 'google-btn-signup'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    google.accounts.id.renderButton(el, {
+      theme: 'filled_black',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'rectangular',
+      width: 320,
+    });
+  });
+}
+
+async function handleGoogleCredential(response) {
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        credential: response.credential,
+        guestToken: getUserToken(),
+        avatar: AUTH.signupAvatar,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { 
+      toast('Google sign-in failed: ' + (data.error || 'unknown'));
+      return;
+    }
+    AUTH.user = data.user;
+    closeAuth();
+    renderUserBadge();
+    toast(`✦ Welcome, ${data.user.displayName}!`);
+  } catch (e) {
+    toast('Google sign-in error');
+  }
+}
+
+// ─── PROFILE EDIT ───────────────────────────────────────────────────────────
+function openProfile() {
+  if (!AUTH.user) return;
+  AUTH.menuOpen = false;
+  document.getElementById('user-menu').classList.add('hidden');
+  AUTH.profileAvatar = AUTH.user.avatar || '✝️';
+  document.getElementById('profile-name').value = AUTH.user.displayName || '';
+  document.getElementById('profile-error').textContent = '';
+  renderProfileAvatars();
+  document.getElementById('profile-overlay').classList.remove('hidden');
+}
+
+function closeProfile() {
+  document.getElementById('profile-overlay').classList.add('hidden');
+}
+
+async function doSaveProfile() {
+  const displayName = document.getElementById('profile-name').value.trim();
+  const errEl = document.getElementById('profile-error');
+  errEl.textContent = '';
+  
+  if (!displayName) { errEl.textContent = 'Display name required'; return; }
+  
+  try {
+    const res = await fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName, avatar: AUTH.profileAvatar }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Save failed'; return; }
+    AUTH.user = data.user;
+    renderUserBadge();
+    closeProfile();
+    toast('✦ Profile updated');
+  } catch (e) {
+    errEl.textContent = 'Connection error';
+  }
+}
+
+// ─── INIT ───────────────────────────────────────────────────────────────────
+(async function initAuth() {
+  await loadAuthConfig();
+  await refreshUser();
+})();
 
 init();
 </script>

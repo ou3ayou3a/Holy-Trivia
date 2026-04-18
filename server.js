@@ -6,6 +6,9 @@ const Anthropic = require('@anthropic-ai/sdk');
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
+const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
 const server = http.createServer(app);
@@ -15,10 +18,16 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '2mb' }));
+app.use(cookieParser());
 
 // Anthropic client — reads ANTHROPIC_API_KEY from Railway env vars
 const anthropic = process.env.ANTHROPIC_API_KEY 
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) 
+  : null;
+
+// Google OAuth client — reads GOOGLE_CLIENT_ID from Railway env vars
+const googleClient = process.env.GOOGLE_CLIENT_ID
+  ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
   : null;
 
 // ─── Database Setup ─────────────────────────────────────────────────────────
@@ -51,6 +60,30 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_user_token ON saved_debates(user_token);
   CREATE INDEX IF NOT EXISTS idx_updated_at ON saved_debates(updated_at);
+  
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    email_lower TEXT UNIQUE NOT NULL,
+    password_hash TEXT,
+    google_id TEXT UNIQUE,
+    display_name TEXT NOT NULL,
+    avatar TEXT NOT NULL DEFAULT '✝️',
+    created_at INTEGER NOT NULL,
+    last_login_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email_lower);
+  CREATE INDEX IF NOT EXISTS idx_users_google ON users(google_id);
+  
+  CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 `);
 
 const stmts = {
@@ -67,7 +100,83 @@ const stmts = {
   getDebate: db.prepare('SELECT * FROM saved_debates WHERE id=? AND user_token=?'),
   listDebates: db.prepare('SELECT id, title, opponent_name, opponent_icon, denomination_name, difficulty, total_score, turns, outcome, created_at, updated_at FROM saved_debates WHERE user_token=? ORDER BY updated_at DESC LIMIT 100'),
   deleteDebate: db.prepare('DELETE FROM saved_debates WHERE id=? AND user_token=?'),
+  
+  // Users
+  insertUser: db.prepare(`
+    INSERT INTO users (id, email, email_lower, password_hash, google_id, display_name, avatar, created_at, last_login_at)
+    VALUES (@id, @email, @email_lower, @password_hash, @google_id, @display_name, @avatar, @created_at, @last_login_at)
+  `),
+  getUserByEmail: db.prepare('SELECT * FROM users WHERE email_lower = ?'),
+  getUserByGoogleId: db.prepare('SELECT * FROM users WHERE google_id = ?'),
+  getUserById: db.prepare('SELECT * FROM users WHERE id = ?'),
+  updateUserLogin: db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?'),
+  updateUserProfile: db.prepare('UPDATE users SET display_name = ?, avatar = ? WHERE id = ?'),
+  setUserGoogleId: db.prepare('UPDATE users SET google_id = ? WHERE id = ?'),
+  
+  // Sessions
+  insertSession: db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'),
+  getSession: db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > ?'),
+  deleteSession: db.prepare('DELETE FROM sessions WHERE token = ?'),
+  cleanupExpiredSessions: db.prepare('DELETE FROM sessions WHERE expires_at < ?'),
+  
+  // Migrate guest debates to user account
+  migrateDebates: db.prepare('UPDATE saved_debates SET user_token = ? WHERE user_token = ?'),
 };
+
+// Cleanup expired sessions hourly
+setInterval(() => {
+  try { stmts.cleanupExpiredSessions.run(Date.now()); } catch(e) {}
+}, 3600000);
+
+// ─── Auth helpers ───────────────────────────────────────────────────────────
+const SESSION_DAYS = 30;
+
+function makeId() {
+  return crypto.randomBytes(12).toString('hex');
+}
+
+function makeSessionToken() {
+  return 's_' + crypto.randomBytes(32).toString('hex');
+}
+
+function isValidEmail(e) {
+  return typeof e === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 200;
+}
+
+function createSession(userId, res) {
+  const token = makeSessionToken();
+  const now = Date.now();
+  const expires = now + SESSION_DAYS * 86400000;
+  stmts.insertSession.run(token, userId, now, expires);
+  res.cookie('hts', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV !== 'development',
+    sameSite: 'lax',
+    maxAge: SESSION_DAYS * 86400000,
+    path: '/',
+  });
+  return token;
+}
+
+function getCurrentUser(req) {
+  const token = req.cookies?.hts;
+  if (!token) return null;
+  const session = stmts.getSession.get(token, Date.now());
+  if (!session) return null;
+  return stmts.getUserById.get(session.user_id) || null;
+}
+
+function publicUser(u) {
+  if (!u) return null;
+  return {
+    id: u.id,
+    email: u.email,
+    displayName: u.display_name,
+    avatar: u.avatar,
+    hasGoogle: !!u.google_id,
+    hasPassword: !!u.password_hash,
+  };
+}
 
 // ─── In-memory room store ───────────────────────────────────────────────────
 const rooms = {}; // roomCode -> roomState
@@ -1153,12 +1262,23 @@ function validateToken(token) {
   return typeof token === 'string' && /^[a-zA-Z0-9_-]{16,100}$/.test(token);
 }
 
-// List all saved debates for this user
+// Resolve which user_token to use:
+// - If logged in, use 'user:<userId>' (always)
+// - Otherwise use guest token from header (must be valid)
+function resolveOwner(req) {
+  const user = getCurrentUser(req);
+  if (user) return { token: 'user:' + user.id, user };
+  const guestToken = req.headers['x-user-token'];
+  if (validateToken(guestToken)) return { token: guestToken, user: null };
+  return null;
+}
+
+// List all saved debates for this user (logged in or guest)
 app.get('/api/debates', (req, res) => {
-  const token = req.headers['x-user-token'];
-  if (!validateToken(token)) return res.status(400).json({ error: 'Invalid user token' });
+  const owner = resolveOwner(req);
+  if (!owner) return res.status(400).json({ error: 'No identity provided' });
   try {
-    const rows = stmts.listDebates.all(token);
+    const rows = stmts.listDebates.all(owner.token);
     res.json({ debates: rows });
   } catch (err) {
     console.error('List debates error:', err);
@@ -1168,10 +1288,10 @@ app.get('/api/debates', (req, res) => {
 
 // Load a specific debate (to resume it)
 app.get('/api/debates/:id', (req, res) => {
-  const token = req.headers['x-user-token'];
-  if (!validateToken(token)) return res.status(400).json({ error: 'Invalid user token' });
+  const owner = resolveOwner(req);
+  if (!owner) return res.status(400).json({ error: 'No identity provided' });
   try {
-    const row = stmts.getDebate.get(req.params.id, token);
+    const row = stmts.getDebate.get(req.params.id, owner.token);
     if (!row) return res.status(404).json({ error: 'Debate not found' });
     row.history = JSON.parse(row.history_json);
     delete row.history_json;
@@ -1184,8 +1304,8 @@ app.get('/api/debates/:id', (req, res) => {
 
 // Save a new debate OR update existing one
 app.post('/api/debates', (req, res) => {
-  const token = req.headers['x-user-token'];
-  if (!validateToken(token)) return res.status(400).json({ error: 'Invalid user token' });
+  const owner = resolveOwner(req);
+  if (!owner) return res.status(400).json({ error: 'No identity provided' });
   try {
     const { id, title, opponentId, opponentName, opponentIcon, denomination, denominationName, difficulty, totalScore, turns, outcome, history } = req.body;
     
@@ -1202,13 +1322,12 @@ app.post('/api/debates', (req, res) => {
     }
     
     if (id) {
-      // Update existing
-      const existing = stmts.getDebate.get(id, token);
+      const existing = stmts.getDebate.get(id, owner.token);
       if (!existing) return res.status(404).json({ error: 'Debate not found' });
       
       stmts.updateDebate.run({
         id,
-        user_token: token,
+        user_token: owner.token,
         title: finalTitle,
         total_score: totalScore || 0,
         turns: turns || 0,
@@ -1218,11 +1337,10 @@ app.post('/api/debates', (req, res) => {
       });
       res.json({ id, saved: true, created: false });
     } else {
-      // Create new
       const newId = crypto.randomBytes(12).toString('hex');
       stmts.insertDebate.run({
         id: newId,
-        user_token: token,
+        user_token: owner.token,
         title: finalTitle,
         opponent_id: opponentId,
         opponent_name: opponentName || 'Unknown',
@@ -1247,15 +1365,197 @@ app.post('/api/debates', (req, res) => {
 
 // Delete a debate
 app.delete('/api/debates/:id', (req, res) => {
-  const token = req.headers['x-user-token'];
-  if (!validateToken(token)) return res.status(400).json({ error: 'Invalid user token' });
+  const owner = resolveOwner(req);
+  if (!owner) return res.status(400).json({ error: 'No identity provided' });
   try {
-    const result = stmts.deleteDebate.run(req.params.id, token);
+    const result = stmts.deleteDebate.run(req.params.id, owner.token);
     res.json({ deleted: result.changes > 0 });
   } catch (err) {
     console.error('Delete debate error:', err);
     res.status(500).json({ error: 'Failed to delete debate' });
   }
+});
+
+// ─── Auth API ───────────────────────────────────────────────────────────────
+
+// Get current logged-in user
+app.get('/api/auth/me', (req, res) => {
+  const user = getCurrentUser(req);
+  res.json({ user: publicUser(user) });
+});
+
+// Sign up with email + password
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { email, password, displayName, avatar, guestToken } = req.body;
+    
+    if (!isValidEmail(email)) return res.status(400).json({ error: 'Invalid email' });
+    if (typeof password !== 'string' || password.length < 8 || password.length > 128) {
+      return res.status(400).json({ error: 'Password must be 8–128 characters' });
+    }
+    if (typeof displayName !== 'string' || displayName.trim().length < 1 || displayName.length > 50) {
+      return res.status(400).json({ error: 'Display name must be 1–50 characters' });
+    }
+    
+    const emailLower = email.toLowerCase().trim();
+    if (stmts.getUserByEmail.get(emailLower)) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+    
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userId = makeId();
+    const now = Date.now();
+    
+    stmts.insertUser.run({
+      id: userId,
+      email: email.trim(),
+      email_lower: emailLower,
+      password_hash: passwordHash,
+      google_id: null,
+      display_name: displayName.trim().slice(0, 50),
+      avatar: (avatar || '✝️').slice(0, 8),
+      created_at: now,
+      last_login_at: now,
+    });
+    
+    // Migrate guest debates if guest token provided
+    if (validateToken(guestToken)) {
+      try { stmts.migrateDebates.run('user:' + userId, guestToken); } catch(e) { console.error('Migration err:', e); }
+    }
+    
+    createSession(userId, res);
+    const user = stmts.getUserById.get(userId);
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Signup failed' });
+  }
+});
+
+// Log in with email + password
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password, guestToken } = req.body;
+    if (!isValidEmail(email) || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+    
+    const user = stmts.getUserByEmail.get(email.toLowerCase().trim());
+    if (!user || !user.password_hash) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
+    
+    stmts.updateUserLogin.run(Date.now(), user.id);
+    
+    if (validateToken(guestToken)) {
+      try { stmts.migrateDebates.run('user:' + user.id, guestToken); } catch(e) {}
+    }
+    
+    createSession(user.id, res);
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Google sign-in (verifies the ID token from Google Identity Services)
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    if (!googleClient) {
+      return res.status(503).json({ error: 'Google sign-in not configured. Admin must set GOOGLE_CLIENT_ID env var.' });
+    }
+    const { credential, guestToken, displayName, avatar } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Missing credential' });
+    
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.sub) return res.status(401).json({ error: 'Invalid Google credential' });
+    
+    const googleId = payload.sub;
+    const email = payload.email;
+    const name = payload.name || displayName || (email ? email.split('@')[0] : 'Believer');
+    
+    let user = stmts.getUserByGoogleId.get(googleId);
+    
+    if (!user && email) {
+      // Existing email account? Link Google to it
+      user = stmts.getUserByEmail.get(email.toLowerCase());
+      if (user) {
+        stmts.setUserGoogleId.run(googleId, user.id);
+      }
+    }
+    
+    if (!user) {
+      // Create new user from Google
+      if (!email) return res.status(400).json({ error: 'Google account missing email' });
+      const userId = makeId();
+      const now = Date.now();
+      stmts.insertUser.run({
+        id: userId,
+        email: email,
+        email_lower: email.toLowerCase(),
+        password_hash: null,
+        google_id: googleId,
+        display_name: (name || 'Believer').slice(0, 50),
+        avatar: (avatar || '✝️').slice(0, 8),
+        created_at: now,
+        last_login_at: now,
+      });
+      user = stmts.getUserById.get(userId);
+    } else {
+      stmts.updateUserLogin.run(Date.now(), user.id);
+    }
+    
+    if (validateToken(guestToken)) {
+      try { stmts.migrateDebates.run('user:' + user.id, guestToken); } catch(e) {}
+    }
+    
+    createSession(user.id, res);
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    console.error('Google login error:', err);
+    res.status(500).json({ error: 'Google sign-in failed' });
+  }
+});
+
+// Log out
+app.post('/api/auth/logout', (req, res) => {
+  const token = req.cookies?.hts;
+  if (token) {
+    try { stmts.deleteSession.run(token); } catch(e) {}
+  }
+  res.clearCookie('hts', { path: '/' });
+  res.json({ ok: true });
+});
+
+// Update profile
+app.patch('/api/auth/profile', (req, res) => {
+  const user = getCurrentUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  
+  const { displayName, avatar } = req.body;
+  if (typeof displayName !== 'string' || displayName.trim().length < 1 || displayName.length > 50) {
+    return res.status(400).json({ error: 'Display name must be 1–50 characters' });
+  }
+  
+  stmts.updateUserProfile.run(displayName.trim().slice(0, 50), (avatar || user.avatar).slice(0, 8), user.id);
+  const updated = stmts.getUserById.get(user.id);
+  res.json({ user: publicUser(updated) });
+});
+
+// Tell the client whether Google sign-in is available + the public client ID
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    googleEnabled: !!googleClient,
+    googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+  });
 });
 
 // ─── Start server ───────────────────────────────────────────────────────────
