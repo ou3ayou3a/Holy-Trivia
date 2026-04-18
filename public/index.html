@@ -1624,6 +1624,9 @@ async function debateSend(){
     appendDebateMsg('opponent', data.response);
     D.history.push({ role: 'opponent', content: data.response, raw: data });
     
+    // AUTO-SAVE after every round (silent, in background)
+    autoSaveDebate();
+    
     // Check for concession
     if (data.conceded) {
       setTimeout(() => endDebate('victory'), 2000);
@@ -1729,6 +1732,71 @@ function debateVoice(){
 }
 
 // ─── SAVE / LOAD DEBATES ────────────────────────────────────────────────────
+
+// Silent auto-save (called after every round and on debate end)
+let autoSaveInFlight = false;
+async function autoSaveDebate(outcome) {
+  if (!D.opponent) return;
+  if (autoSaveInFlight) return; // prevent overlapping saves
+  autoSaveInFlight = true;
+  
+  try {
+    const payload = {
+      id: D.savedId || undefined,
+      title: `${D.opponent.icon} ${D.opponent.name} · ${D.denominationName}`,
+      opponentId: D.opponentId,
+      opponentName: D.opponent.name,
+      opponentIcon: D.opponent.icon,
+      denomination: D.denomination,
+      denominationName: D.denominationName,
+      difficulty: D.difficulty,
+      totalScore: D.totalScore,
+      turns: D.turns,
+      outcome: outcome || null,
+      history: D.history,
+    };
+    
+    const res = await fetch('/api/debates', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-token': getUserToken(),
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (!D.savedId) D.savedId = data.id;
+      // Show subtle indicator
+      showAutoSaveIndicator();
+      updateSaveButtonLabel();
+    }
+  } catch (err) {
+    // Silent fail — don't disrupt the user with errors during auto-save
+    console.error('Auto-save failed:', err);
+  } finally {
+    autoSaveInFlight = false;
+  }
+}
+
+// Subtle "✓ Saved" indicator
+let autoSaveTimer = null;
+function showAutoSaveIndicator() {
+  const btn = document.getElementById('debate-save-btn');
+  if (!btn) return;
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  const original = D.savedId ? '💾 Update Save' : '💾 Save';
+  btn.textContent = '✓ Auto-saved';
+  btn.style.color = '#80e880';
+  btn.style.borderColor = 'rgba(80,200,120,.5)';
+  autoSaveTimer = setTimeout(() => {
+    btn.textContent = original;
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }, 2000);
+}
+
 async function debateSave() {
   if (!D.opponent) { toast('No active debate to save'); return; }
   if (D.loading) return;
@@ -1922,33 +1990,12 @@ async function deleteSavedDebate(id, title) {
   }
 }
 
-// Override endDebate to auto-save final outcome if this debate is saved
+// Override endDebate to ALWAYS auto-save final outcome
 const _origEndDebate = endDebate;
 endDebate = function(reason) {
-  // Auto-save the final outcome if we have a saved debate
-  if (D.savedId) {
-    fetch('/api/debates', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-user-token': getUserToken(),
-      },
-      body: JSON.stringify({
-        id: D.savedId,
-        title: `${D.opponent.icon} ${D.opponent.name} · ${D.denominationName}`,
-        opponentId: D.opponentId,
-        opponentName: D.opponent.name,
-        opponentIcon: D.opponent.icon,
-        denomination: D.denomination,
-        denominationName: D.denominationName,
-        difficulty: D.difficulty,
-        totalScore: D.totalScore,
-        turns: D.turns,
-        outcome: reason,
-        history: D.history,
-      }),
-    }).catch(err => console.error('Auto-save failed:', err));
-  }
+  // Always auto-save on debate end — even if never manually saved
+  // This guarantees no debate is ever lost
+  autoSaveDebate(reason);
   _origEndDebate(reason);
 };
 
