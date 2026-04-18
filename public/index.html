@@ -597,7 +597,7 @@ input::placeholder{color:rgba(255,255,255,.2)}
     <div style="height:12px"></div>
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="goHome()">← Home</button>
-      <button class="btn btn-gold" id="play-again-btn" style="display:none" onclick="goSetup()">Play Again ✛</button>
+      <button class="btn btn-gold" id="play-again-btn" style="display:none" onclick="playAgain()">Play Again ✛</button>
     </div>
   </div>
 </div>
@@ -1159,7 +1159,7 @@ function showFinal(){
   else if(showLoser) launchHellfire();
 }
 
-function goSetup(){ show('setup'); }
+function playAgain(){ show('setup'); }
 
 // ── CONFETTI ──────────────────────────────────────────────────────────────────
 function launchConfetti(){
