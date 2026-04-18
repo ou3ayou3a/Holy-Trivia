@@ -383,6 +383,38 @@ input::placeholder{color:rgba(255,255,255,.2)}
   </div>
 </div>
 
+<!-- GUEST WARNING MODAL (NOT DISMISSIBLE WITHOUT BUTTON CLICK) -->
+<div id="guest-warning" class="auth-overlay hidden">
+  <div class="auth-modal" style="position:relative;max-width:460px">
+    <h2 style="color:#e8c84a">⚠ Playing as Guest</h2>
+    <div class="auth-sub">✦ A friendly heads-up before you continue ✦</div>
+    <div style="font-family:'Crimson Pro',serif;color:#e8dfc0;font-size:1rem;line-height:1.6;padding:14px 4px;text-align:center">
+      You're about to play without an account. Just so you know:
+      <div style="margin-top:14px;padding:14px;background:rgba(232,200,74,.06);border:1px solid rgba(232,200,74,.2);border-radius:2px;text-align:left">
+        <div style="margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+          <span style="font-size:1.2rem">🏆</span>
+          <span><strong style="color:#e8c84a">No leaderboard</strong> — your wins won't be ranked among the faithful</span>
+        </div>
+        <div style="margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+          <span style="font-size:1.2rem">💾</span>
+          <span><strong style="color:#e8c84a">No saving</strong> — debates and progress vanish when you close the tab</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="font-size:1.2rem">📊</span>
+          <span><strong style="color:#e8c84a">No stats</strong> — your win rate and history won't be tracked</span>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-style:italic;color:rgba(232,223,192,.6);font-size:.9rem">
+        Creating an account is free and takes 10 seconds.
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost" onclick="dismissGuestWarning()" style="flex:1;margin:0">Continue as Guest</button>
+      <button class="btn btn-gold" onclick="dismissGuestWarning(true)" style="flex:1;margin:0">✦ Sign Up Free</button>
+    </div>
+  </div>
+</div>
+
 <!-- HOME -->
 <div id="screen-home" class="page">
   <div class="card">
@@ -751,8 +783,18 @@ function show(name){
   if(['lobby','game','scoreboard','final'].includes(name)) showChat();
   else hideChat();
 }
-function goSetup(){const nm=document.getElementById('home-name').value.trim();if(!nm){toast('Enter your name first!');return;}S.name=nm;show('setup');}
-function goJoin(){const nm=document.getElementById('home-name').value.trim();if(!nm){toast('Enter your name first!');return;}S.name=nm;show('join');}
+function goSetup(){
+  const nm=document.getElementById('home-name').value.trim();
+  if(!nm){toast('Enter your name first!');return;}
+  S.name=nm;
+  guardGuestStart(()=>show('setup'));
+}
+function goJoin(){
+  const nm=document.getElementById('home-name').value.trim();
+  if(!nm){toast('Enter your name first!');return;}
+  S.name=nm;
+  guardGuestStart(()=>show('join'));
+}
 function goHome(){if(S.timerInterval)clearInterval(S.timerInterval);S.roomCode='';S.isHost=false;show('home');}
 
 // ── SOCKET EVENTS ────────────────────────────────────────────────────────────
@@ -1555,24 +1597,59 @@ function requireLogin(actionName) {
   return false;
 }
 
+// ─── Guest game-start warning ──────────────────────────────────────────────
+// Shows once per page load when a guest starts a debate or trivia game.
+// Returns true synchronously if the user should proceed immediately.
+// Returns false if the warning is being shown (and the warning will replay the action via callback).
+let guestWarningShown = false;
+let guestWarningPendingAction = null;
+
+function guardGuestStart(actionFn) {
+  // If logged in, just proceed
+  if (AUTH && AUTH.user) { actionFn(); return; }
+  // If we already showed it this session, just proceed
+  if (guestWarningShown) { actionFn(); return; }
+  // Show warning, defer the action until they click "Continue as Guest"
+  guestWarningPendingAction = actionFn;
+  document.getElementById('guest-warning').classList.remove('hidden');
+}
+
+function dismissGuestWarning(signupInstead) {
+  document.getElementById('guest-warning').classList.add('hidden');
+  guestWarningShown = true;
+  const pending = guestWarningPendingAction;
+  guestWarningPendingAction = null;
+  
+  if (signupInstead) {
+    // Open signup modal — don't run the pending action
+    if (typeof openAuth === 'function') openAuth('signup');
+    return;
+  }
+  // Run the pending action they were trying to do
+  if (pending) pending();
+}
+
 // Clean up old guest token from localStorage (no longer used)
 try { localStorage.removeItem('holy_user_token'); } catch(e) {}
 
 async function goDebate(){
-  show('debate-denom');
-  // Fetch opponents and denominations
-  if (D.opponentsList.length === 0) {
-    try {
-      const res = await fetch('/api/debate/opponents');
-      const data = await res.json();
-      D.opponentsList = data.opponents;
-      D.denominationsList = data.denominations;
-      renderDenominations();
-    } catch (e) {
-      toast('Failed to load debate data');
-      console.error(e);
+  // Show guest warning first if applicable, then proceed
+  guardGuestStart(async () => {
+    show('debate-denom');
+    // Fetch opponents and denominations
+    if (D.opponentsList.length === 0) {
+      try {
+        const res = await fetch('/api/debate/opponents');
+        const data = await res.json();
+        D.opponentsList = data.opponents;
+        D.denominationsList = data.denominations;
+        renderDenominations();
+      } catch (e) {
+        toast('Failed to load debate data');
+        console.error(e);
+      }
     }
-  }
+  });
 }
 
 function renderDenominations(){
@@ -2377,6 +2454,7 @@ async function doLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
   } catch (e) {}
   AUTH.user = null;
+  guestWarningShown = false; // they'll see the warning again as a guest
   renderUserBadge();
   toast('Signed out');
 }
