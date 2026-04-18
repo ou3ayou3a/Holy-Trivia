@@ -84,6 +84,20 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+  
+  CREATE TABLE IF NOT EXISTS user_stats (
+    user_id TEXT PRIMARY KEY,
+    debate_wins INTEGER DEFAULT 0,
+    debate_losses INTEGER DEFAULT 0,
+    debate_total INTEGER DEFAULT 0,
+    debate_score_total INTEGER DEFAULT 0,
+    trivia_wins INTEGER DEFAULT 0,
+    trivia_played INTEGER DEFAULT 0,
+    last_active_at INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_stats_wins ON user_stats(debate_wins DESC);
+  CREATE INDEX IF NOT EXISTS idx_stats_trivia ON user_stats(trivia_wins DESC);
 `);
 
 const stmts = {
@@ -121,7 +135,63 @@ const stmts = {
   
   // Migrate guest debates to user account
   migrateDebates: db.prepare('UPDATE saved_debates SET user_token = ? WHERE user_token = ?'),
+  
+  // Stats
+  getStats: db.prepare('SELECT * FROM user_stats WHERE user_id = ?'),
+  initStats: db.prepare(`INSERT OR IGNORE INTO user_stats (user_id, last_active_at) VALUES (?, ?)`),
+  bumpDebateWin: db.prepare(`UPDATE user_stats SET debate_wins = debate_wins + 1, debate_total = debate_total + 1, debate_score_total = debate_score_total + ?, last_active_at = ? WHERE user_id = ?`),
+  bumpDebateLoss: db.prepare(`UPDATE user_stats SET debate_losses = debate_losses + 1, debate_total = debate_total + 1, debate_score_total = debate_score_total + ?, last_active_at = ? WHERE user_id = ?`),
+  bumpTriviaWin: db.prepare(`UPDATE user_stats SET trivia_wins = trivia_wins + 1, trivia_played = trivia_played + 1, last_active_at = ? WHERE user_id = ?`),
+  bumpTriviaPlay: db.prepare(`UPDATE user_stats SET trivia_played = trivia_played + 1, last_active_at = ? WHERE user_id = ?`),
+  
+  // Leaderboards
+  topDebaters: db.prepare(`
+    SELECT u.id, u.display_name, u.avatar, s.debate_wins, s.debate_losses, s.debate_total, s.debate_score_total
+    FROM user_stats s JOIN users u ON s.user_id = u.id
+    WHERE s.debate_total > 0
+    ORDER BY s.debate_wins DESC, s.debate_score_total DESC
+    LIMIT 100
+  `),
+  topTrivia: db.prepare(`
+    SELECT u.id, u.display_name, u.avatar, s.trivia_wins, s.trivia_played
+    FROM user_stats s JOIN users u ON s.user_id = u.id
+    WHERE s.trivia_played > 0
+    ORDER BY s.trivia_wins DESC, s.trivia_played DESC
+    LIMIT 100
+  `),
+  
+  // Public profile
+  publicProfile: db.prepare(`
+    SELECT u.id, u.display_name, u.avatar, u.created_at, 
+           s.debate_wins, s.debate_losses, s.debate_total, s.debate_score_total,
+           s.trivia_wins, s.trivia_played
+    FROM users u LEFT JOIN user_stats s ON s.user_id = u.id
+    WHERE u.id = ?
+  `),
+  
+  // One-time cleanup of all guest data (debates not owned by a user)
+  cleanupGuestDebates: db.prepare(`DELETE FROM saved_debates WHERE user_token NOT LIKE 'user:%'`),
 };
+
+// Helper: update stats when a debate ends
+function updateUserStats(userId, outcome, score) {
+  try {
+    stmts.initStats.run(userId, Date.now());
+    if (outcome === 'victory') {
+      stmts.bumpDebateWin.run(score, Date.now(), userId);
+    } else if (outcome === 'surrender') {
+      stmts.bumpDebateLoss.run(score, Date.now(), userId);
+    }
+  } catch (e) { console.error('Stats update failed:', e); }
+}
+
+// One-time cleanup: delete all guest debates (login required now)
+try {
+  const result = stmts.cleanupGuestDebates.run();
+  if (result.changes > 0) {
+    console.log(`🧹 Removed ${result.changes} guest debates (login now required)`);
+  }
+} catch (e) { console.error('Guest cleanup failed:', e); }
 
 // Cleanup expired sessions hourly
 setInterval(() => {
@@ -1257,26 +1327,18 @@ Rules:
   }
 });
 
-// ─── Saved Debates API ──────────────────────────────────────────────────────
-function validateToken(token) {
-  return typeof token === 'string' && /^[a-zA-Z0-9_-]{16,100}$/.test(token);
-}
-
-// Resolve which user_token to use:
-// - If logged in, use 'user:<userId>' (always)
-// - Otherwise use guest token from header (must be valid)
-function resolveOwner(req) {
+// ─── Saved Debates API (LOGIN REQUIRED) ────────────────────────────────────
+// Returns the user_token (always 'user:<id>') for the logged-in user, or null
+function ownerForUser(req) {
   const user = getCurrentUser(req);
-  if (user) return { token: 'user:' + user.id, user };
-  const guestToken = req.headers['x-user-token'];
-  if (validateToken(guestToken)) return { token: guestToken, user: null };
-  return null;
+  if (!user) return null;
+  return { token: 'user:' + user.id, user };
 }
 
-// List all saved debates for this user (logged in or guest)
+// List all saved debates for the logged-in user
 app.get('/api/debates', (req, res) => {
-  const owner = resolveOwner(req);
-  if (!owner) return res.status(400).json({ error: 'No identity provided' });
+  const owner = ownerForUser(req);
+  if (!owner) return res.status(401).json({ error: 'Login required to access debates' });
   try {
     const rows = stmts.listDebates.all(owner.token);
     res.json({ debates: rows });
@@ -1288,8 +1350,8 @@ app.get('/api/debates', (req, res) => {
 
 // Load a specific debate (to resume it)
 app.get('/api/debates/:id', (req, res) => {
-  const owner = resolveOwner(req);
-  if (!owner) return res.status(400).json({ error: 'No identity provided' });
+  const owner = ownerForUser(req);
+  if (!owner) return res.status(401).json({ error: 'Login required' });
   try {
     const row = stmts.getDebate.get(req.params.id, owner.token);
     if (!row) return res.status(404).json({ error: 'Debate not found' });
@@ -1304,8 +1366,8 @@ app.get('/api/debates/:id', (req, res) => {
 
 // Save a new debate OR update existing one
 app.post('/api/debates', (req, res) => {
-  const owner = resolveOwner(req);
-  if (!owner) return res.status(400).json({ error: 'No identity provided' });
+  const owner = ownerForUser(req);
+  if (!owner) return res.status(401).json({ error: 'Save feature is for members only — please sign in or create a free account.' });
   try {
     const { id, title, opponentId, opponentName, opponentIcon, denomination, denominationName, difficulty, totalScore, turns, outcome, history } = req.body;
     
@@ -1355,6 +1417,10 @@ app.post('/api/debates', (req, res) => {
         created_at: now,
         updated_at: now,
       });
+      // Update leaderboard stats if outcome is final
+      if (outcome === 'victory' || outcome === 'surrender') {
+        updateUserStats(owner.user.id, outcome, totalScore || 0);
+      }
       res.json({ id: newId, saved: true, created: true });
     }
   } catch (err) {
@@ -1365,8 +1431,8 @@ app.post('/api/debates', (req, res) => {
 
 // Delete a debate
 app.delete('/api/debates/:id', (req, res) => {
-  const owner = resolveOwner(req);
-  if (!owner) return res.status(400).json({ error: 'No identity provided' });
+  const owner = ownerForUser(req);
+  if (!owner) return res.status(401).json({ error: 'Login required' });
   try {
     const result = stmts.deleteDebate.run(req.params.id, owner.token);
     res.json({ deleted: result.changes > 0 });
@@ -1418,10 +1484,8 @@ app.post('/api/auth/signup', async (req, res) => {
       last_login_at: now,
     });
     
-    // Migrate guest debates if guest token provided
-    if (validateToken(guestToken)) {
-      try { stmts.migrateDebates.run('user:' + userId, guestToken); } catch(e) { console.error('Migration err:', e); }
-    }
+    // Initialize stats for new user
+    stmts.initStats.run(userId, Date.now());
     
     createSession(userId, res);
     const user = stmts.getUserById.get(userId);
@@ -1449,10 +1513,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
     
     stmts.updateUserLogin.run(Date.now(), user.id);
-    
-    if (validateToken(guestToken)) {
-      try { stmts.migrateDebates.run('user:' + user.id, guestToken); } catch(e) {}
-    }
+    stmts.initStats.run(user.id, Date.now());
     
     createSession(user.id, res);
     res.json({ user: publicUser(user) });
@@ -1513,9 +1574,7 @@ app.post('/api/auth/google', async (req, res) => {
       stmts.updateUserLogin.run(Date.now(), user.id);
     }
     
-    if (validateToken(guestToken)) {
-      try { stmts.migrateDebates.run('user:' + user.id, guestToken); } catch(e) {}
-    }
+    stmts.initStats.run(user.id, Date.now());
     
     createSession(user.id, res);
     res.json({ user: publicUser(user) });
@@ -1556,6 +1615,52 @@ app.get('/api/auth/config', (req, res) => {
     googleEnabled: !!googleClient,
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
   });
+});
+
+// ─── Leaderboard API ────────────────────────────────────────────────────────
+app.get('/api/leaderboard/debaters', (req, res) => {
+  try {
+    const rows = stmts.topDebaters.all();
+    res.json({ leaders: rows });
+  } catch (err) {
+    console.error('Leaderboard error:', err);
+    res.status(500).json({ error: 'Failed to load leaderboard' });
+  }
+});
+
+app.get('/api/leaderboard/trivia', (req, res) => {
+  try {
+    const rows = stmts.topTrivia.all();
+    res.json({ leaders: rows });
+  } catch (err) {
+    console.error('Trivia leaderboard error:', err);
+    res.status(500).json({ error: 'Failed to load leaderboard' });
+  }
+});
+
+// ─── Public Profile API ─────────────────────────────────────────────────────
+app.get('/api/users/:id', (req, res) => {
+  try {
+    const profile = stmts.publicProfile.get(req.params.id);
+    if (!profile) return res.status(404).json({ error: 'User not found' });
+    res.json({
+      profile: {
+        id: profile.id,
+        displayName: profile.display_name,
+        avatar: profile.avatar,
+        joinedAt: profile.created_at,
+        debateWins: profile.debate_wins || 0,
+        debateLosses: profile.debate_losses || 0,
+        debateTotal: profile.debate_total || 0,
+        debateScoreTotal: profile.debate_score_total || 0,
+        triviaWins: profile.trivia_wins || 0,
+        triviaPlayed: profile.trivia_played || 0,
+      }
+    });
+  } catch (err) {
+    console.error('Profile error:', err);
+    res.status(500).json({ error: 'Failed to load profile' });
+  }
 });
 
 // ─── Start server ───────────────────────────────────────────────────────────

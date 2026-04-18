@@ -284,6 +284,38 @@ input::placeholder{color:rgba(255,255,255,.2)}
 .google-btn-wrap{display:flex;justify-content:center;margin:8px 0}
 .guest-link{display:block;text-align:center;margin-top:14px;font-family:'Crimson Pro',serif;font-size:.85rem;color:rgba(232,223,192,.5);text-decoration:underline;cursor:pointer;font-style:italic}
 .guest-link:hover{color:#e8dfc0}
+
+/* ─── LEADERBOARD ─── */
+.lb-tabs{display:flex;border-bottom:1px solid rgba(232,200,74,.2);margin-bottom:14px}
+.lb-tab{flex:1;padding:10px;background:transparent;border:none;color:rgba(232,223,192,.5);font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.lb-tab.active{color:#e8c84a;border-bottom-color:#e8c84a}
+.lb-tab:hover:not(.active){color:#e8dfc0}
+.lb-list{display:flex;flex-direction:column;gap:6px;max-height:550px;overflow-y:auto;padding:2px}
+.lb-row{display:flex;gap:12px;padding:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:2px;align-items:center;cursor:pointer;transition:all .15s}
+.lb-row:hover{background:rgba(232,200,74,.06);border-color:rgba(232,200,74,.3)}
+.lb-rank{font-family:'Cinzel Decorative',serif;font-size:1.2rem;color:rgba(232,200,74,.7);width:36px;text-align:center;flex-shrink:0}
+.lb-rank.top1{color:#ffd700;font-size:1.6rem}
+.lb-rank.top2{color:#c0c0c0;font-size:1.4rem}
+.lb-rank.top3{color:#cd7f32;font-size:1.3rem}
+.lb-avatar{font-size:1.7rem;flex-shrink:0;width:36px;text-align:center}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-family:'Cinzel',serif;font-size:.9rem;color:#e8dfc0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.lb-stats{display:flex;gap:10px;font-family:'Crimson Pro',serif;font-size:.78rem;color:rgba(232,223,192,.55);flex-wrap:wrap}
+.lb-stats span{white-space:nowrap}
+.lb-stats .lb-wins{color:#80e880;font-weight:600}
+
+/* ─── PUBLIC PROFILE ─── */
+.pp-header{display:flex;align-items:center;gap:16px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(232,200,74,.2)}
+.pp-avatar{font-size:3.5rem;line-height:1;flex-shrink:0}
+.pp-name-block{flex:1;min-width:0}
+.pp-name{font-family:'Cinzel Decorative',serif;font-size:1.6rem;color:#e8c84a;margin:0 0 4px}
+.pp-joined{font-family:'Crimson Pro',serif;font-size:.85rem;color:rgba(232,223,192,.5);font-style:italic}
+.pp-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.pp-stat{padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(232,200,74,.15);border-radius:2px;text-align:center}
+.pp-stat-icon{font-size:1.5rem;margin-bottom:4px}
+.pp-stat-val{font-family:'Cinzel Decorative',serif;font-size:1.6rem;color:#e8c84a;line-height:1}
+.pp-stat-label{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.1em;color:rgba(232,200,74,.5);text-transform:uppercase;margin-top:4px}
+.pp-section-title{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.15em;color:rgba(232,200,74,.5);text-transform:uppercase;margin:18px 0 10px;text-align:center}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -364,9 +396,40 @@ input::placeholder{color:rgba(255,255,255,.2)}
     <button class="btn btn-gold" onclick="goSetup()">✛ Create a Room</button>
     <button class="btn btn-outline" onclick="goJoin()">→ Join a Room</button>
     <button class="btn btn-outline" onclick="goDebate()" style="border-color:rgba(220,60,60,.4);color:#e85050">⚔️ Enter the Debate Arena</button>
+    <button class="btn btn-outline" onclick="goLeaderboard()" style="border-color:rgba(232,200,74,.5);color:#e8c84a">🏆 Leaderboard</button>
     <div class="italic-quote">"Thy word is a lamp unto my feet" — Psalm 119:105</div>
     <div style="text-align:center;margin-top:10px;font-family:Cinzel,serif;font-size:.55rem;letter-spacing:.1em;color:rgba(255,255,255,.2)">
       <span class="conn-dot" id="conn-dot"></span><span id="conn-label">Connecting...</span>
+    </div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="screen-leaderboard" class="page hidden">
+  <div class="card" style="max-width:680px">
+    <h1 style="font-size:1.8rem">🏆 Leaderboard</h1>
+    <div class="subtitle">✦ The faithful, ranked ✦</div>
+    <div class="divider"></div>
+    <div class="lb-tabs">
+      <button class="lb-tab active" id="lb-tab-debaters" onclick="switchLeaderboard('debaters')">⚔️ Top Debaters</button>
+      <button class="lb-tab" id="lb-tab-trivia" onclick="switchLeaderboard('trivia')">📖 Top Trivia</button>
+    </div>
+    <div id="lb-list" class="lb-list"></div>
+    <div id="lb-empty" class="hidden" style="text-align:center;padding:30px 10px;color:rgba(255,255,255,.4);font-family:'Crimson Pro',serif;font-style:italic">
+      No champions yet — be the first to claim glory!
+    </div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="show('home')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- PUBLIC PROFILE -->
+<div id="screen-profile" class="page hidden">
+  <div class="card" style="max-width:560px">
+    <div id="profile-content"></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost" id="profile-back-btn" onclick="show('leaderboard')">← Back</button>
     </div>
   </div>
 </div>
@@ -1484,16 +1547,16 @@ const D = {
   savedId: null,     // set when loaded from saved or after first save
 };
 
-// ─── USER TOKEN (local identifier, persists in localStorage) ────────────────
-function getUserToken() {
-  let t = localStorage.getItem('holy_user_token');
-  if (!t) {
-    t = 'u_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
-      .map(b => b.toString(16).padStart(2, '0')).join('');
-    localStorage.setItem('holy_user_token', t);
-  }
-  return t;
+// ─── Helper: must be logged in to use save/load features ─────────────────────
+function requireLogin(actionName) {
+  if (typeof AUTH !== 'undefined' && AUTH.user) return true;
+  toast('Save feature is for members — sign in or create a free account');
+  setTimeout(() => { if (typeof openAuth === 'function') openAuth('signup'); }, 600);
+  return false;
 }
+
+// Clean up old guest token from localStorage (no longer used)
+try { localStorage.removeItem('holy_user_token'); } catch(e) {}
 
 async function goDebate(){
   show('debate-denom');
@@ -1830,13 +1893,15 @@ function debateVoice(){
   toast('🎙️ Listening...');
 }
 
-// ─── SAVE / LOAD DEBATES ────────────────────────────────────────────────────
+// ─── SAVE / LOAD DEBATES (LOGIN REQUIRED) ──────────────────────────────────
 
 // Silent auto-save (called after every round and on debate end)
+// Skips silently if user isn't logged in
 let autoSaveInFlight = false;
 async function autoSaveDebate(outcome) {
   if (!D.opponent) return;
-  if (autoSaveInFlight) return; // prevent overlapping saves
+  if (!AUTH || !AUTH.user) return; // No-op for guests
+  if (autoSaveInFlight) return;
   autoSaveInFlight = true;
   
   try {
@@ -1857,22 +1922,18 @@ async function autoSaveDebate(outcome) {
     
     const res = await fetch('/api/debates', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-user-token': getUserToken(),
-      },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify(payload),
     });
     
     if (res.ok) {
       const data = await res.json();
       if (!D.savedId) D.savedId = data.id;
-      // Show subtle indicator
       showAutoSaveIndicator();
       updateSaveButtonLabel();
     }
   } catch (err) {
-    // Silent fail — don't disrupt the user with errors during auto-save
     console.error('Auto-save failed:', err);
   } finally {
     autoSaveInFlight = false;
@@ -1899,9 +1960,9 @@ function showAutoSaveIndicator() {
 async function debateSave() {
   if (!D.opponent) { toast('No active debate to save'); return; }
   if (D.loading) return;
+  if (!requireLogin('save')) return;
   
   const btn = document.getElementById('debate-save-btn');
-  const originalText = btn.textContent;
   btn.textContent = '💾 Saving...';
   btn.disabled = true;
   
@@ -1917,21 +1978,24 @@ async function debateSave() {
       difficulty: D.difficulty,
       totalScore: D.totalScore,
       turns: D.turns,
-      outcome: null, // ongoing
+      outcome: null,
       history: D.history,
     };
     
     const res = await fetch('/api/debates', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-user-token': getUserToken(),
-      },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify(payload),
     });
     
     if (!res.ok) {
       const err = await res.json();
+      if (res.status === 401) {
+        toast('Save feature is for members only — please sign in');
+        setTimeout(() => openAuth('signup'), 600);
+        return;
+      }
       throw new Error(err.error || 'Save failed');
     }
     
@@ -1948,6 +2012,7 @@ async function debateSave() {
 }
 
 async function goSavedDebates() {
+  if (!requireLogin('view saved debates')) return;
   show('debate-saved');
   const listEl = document.getElementById('saved-list');
   const emptyEl = document.getElementById('saved-empty');
@@ -1956,8 +2021,14 @@ async function goSavedDebates() {
   
   try {
     const res = await fetch('/api/debates', {
-      headers: { 'x-user-token': getUserToken() },
+      credentials: 'same-origin',
     });
+    if (res.status === 401) {
+      listEl.innerHTML = '';
+      emptyEl.classList.remove('hidden');
+      emptyEl.innerHTML = 'Please sign in to view your saved debates.';
+      return;
+    }
     if (!res.ok) throw new Error('Failed to load');
     const data = await res.json();
     const debates = data.debates || [];
@@ -2006,6 +2077,7 @@ async function goSavedDebates() {
 }
 
 async function loadSavedDebate(id) {
+  if (!requireLogin('load debate')) return;
   // Need opponents list loaded first
   if (D.opponentsList.length === 0) {
     try {
@@ -2018,7 +2090,7 @@ async function loadSavedDebate(id) {
   
   try {
     const res = await fetch('/api/debates/' + id, {
-      headers: { 'x-user-token': getUserToken() },
+      credentials: 'same-origin',
     });
     if (!res.ok) throw new Error('Failed to load debate');
     const { debate } = await res.json();
@@ -2073,16 +2145,16 @@ async function loadSavedDebate(id) {
 }
 
 async function deleteSavedDebate(id, title) {
+  if (!requireLogin('delete debate')) return;
   if (!confirm(`Delete this debate?\n\n"${title}"\n\nThis cannot be undone.`)) return;
   
   try {
     const res = await fetch('/api/debates/' + id, {
       method: 'DELETE',
-      headers: { 'x-user-token': getUserToken() },
+      credentials: 'same-origin',
     });
     if (!res.ok) throw new Error('Delete failed');
     toast('🗑️ Debate deleted');
-    // Refresh list
     goSavedDebates();
   } catch (err) {
     toast('Delete failed: ' + err.message);
@@ -2162,8 +2234,10 @@ function toggleUserMenu() {
   
   menu.innerHTML = `
     <div class="um-info">${AUTH.user.avatar} ${escapeHtml(AUTH.user.displayName)}<br><span style="font-size:.7rem;opacity:.7">${escapeHtml(AUTH.user.email)}</span></div>
+    <button onclick="goPublicProfile('${AUTH.user.id}', 'home')">👤 View My Profile</button>
     <button onclick="openProfile()">✎ Edit Profile</button>
     <button onclick="goSavedDebatesFromMenu()">📚 My Saved Debates</button>
+    <button onclick="goLeaderboardFromMenu()">🏆 Leaderboard</button>
     <div class="um-divider"></div>
     <button onclick="doLogout()" style="color:#e85050">→ Sign Out</button>
   `;
@@ -2182,6 +2256,12 @@ function goSavedDebatesFromMenu() {
   AUTH.menuOpen = false;
   document.getElementById('user-menu').classList.add('hidden');
   if (typeof goSavedDebates === 'function') goSavedDebates();
+}
+
+function goLeaderboardFromMenu() {
+  AUTH.menuOpen = false;
+  document.getElementById('user-menu').classList.add('hidden');
+  goLeaderboard();
 }
 
 // ─── AUTH MODAL ─────────────────────────────────────────────────────────────
@@ -2246,7 +2326,7 @@ async function doLogin() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, guestToken: getUserToken() }),
+      body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
     if (!res.ok) { errEl.textContent = data.error || 'Login failed'; return; }
@@ -2277,7 +2357,6 @@ async function doSignup() {
       body: JSON.stringify({ 
         email, password, displayName, 
         avatar: AUTH.signupAvatar,
-        guestToken: getUserToken(),
       }),
     });
     const data = await res.json();
@@ -2347,7 +2426,6 @@ async function handleGoogleCredential(response) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         credential: response.credential,
-        guestToken: getUserToken(),
         avatar: AUTH.signupAvatar,
       }),
     });
@@ -2402,6 +2480,136 @@ async function doSaveProfile() {
     toast('✦ Profile updated');
   } catch (e) {
     errEl.textContent = 'Connection error';
+  }
+}
+
+// ─── LEADERBOARD ────────────────────────────────────────────────────────────
+const LB = { tab: 'debaters', cache: { debaters: null, trivia: null } };
+
+function goLeaderboard() {
+  show('leaderboard');
+  switchLeaderboard(LB.tab);
+}
+
+function switchLeaderboard(tab) {
+  LB.tab = tab;
+  document.getElementById('lb-tab-debaters').classList.toggle('active', tab === 'debaters');
+  document.getElementById('lb-tab-trivia').classList.toggle('active', tab === 'trivia');
+  loadLeaderboard(tab);
+}
+
+async function loadLeaderboard(tab) {
+  const listEl = document.getElementById('lb-list');
+  const emptyEl = document.getElementById('lb-empty');
+  emptyEl.classList.add('hidden');
+  listEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;font-style:italic">Loading...</div>';
+  
+  try {
+    const res = await fetch('/api/leaderboard/' + tab);
+    if (!res.ok) throw new Error('Failed to load');
+    const data = await res.json();
+    const leaders = data.leaders || [];
+    LB.cache[tab] = leaders;
+    
+    if (leaders.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+    
+    listEl.innerHTML = leaders.map((u, idx) => {
+      const rank = idx + 1;
+      const rankCls = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
+      const rankStr = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+      let stats = '';
+      if (tab === 'debaters') {
+        const winRate = u.debate_total > 0 ? Math.round((u.debate_wins / u.debate_total) * 100) : 0;
+        stats = `<span class="lb-wins">${u.debate_wins} wins</span> <span>${u.debate_losses} losses</span> <span>${winRate}% rate</span> <span>${u.debate_score_total} pts</span>`;
+      } else {
+        const winRate = u.trivia_played > 0 ? Math.round((u.trivia_wins / u.trivia_played) * 100) : 0;
+        stats = `<span class="lb-wins">${u.trivia_wins} wins</span> <span>${u.trivia_played} played</span> <span>${winRate}% rate</span>`;
+      }
+      return `
+        <div class="lb-row" onclick="goPublicProfile('${u.id}', 'leaderboard')">
+          <div class="lb-rank ${rankCls}">${rankStr}</div>
+          <div class="lb-avatar">${u.avatar || '✝️'}</div>
+          <div class="lb-info">
+            <div class="lb-name">${escapeHtml(u.display_name)}</div>
+            <div class="lb-stats">${stats}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    listEl.innerHTML = `<div style="text-align:center;color:#e85050;padding:20px">Error loading leaderboard</div>`;
+  }
+}
+
+// ─── PUBLIC PROFILE ─────────────────────────────────────────────────────────
+async function goPublicProfile(userId, fromScreen) {
+  show('profile');
+  document.getElementById('profile-back-btn').onclick = () => show(fromScreen || 'home');
+  const content = document.getElementById('profile-content');
+  content.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.4);padding:30px;font-style:italic">Loading profile...</div>';
+  
+  try {
+    const res = await fetch('/api/users/' + userId);
+    if (!res.ok) throw new Error('Profile not found');
+    const { profile } = await res.json();
+    
+    const winRate = profile.debateTotal > 0 ? Math.round((profile.debateWins / profile.debateTotal) * 100) : 0;
+    const triviaRate = profile.triviaPlayed > 0 ? Math.round((profile.triviaWins / profile.triviaPlayed) * 100) : 0;
+    const joinDate = new Date(profile.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    content.innerHTML = `
+      <div class="pp-header">
+        <div class="pp-avatar">${profile.avatar || '✝️'}</div>
+        <div class="pp-name-block">
+          <h1 class="pp-name">${escapeHtml(profile.displayName)}</h1>
+          <div class="pp-joined">✦ Joined ${joinDate} ✦</div>
+        </div>
+      </div>
+      
+      <div class="pp-section-title">⚔️ Debate Arena</div>
+      <div class="pp-stats-grid">
+        <div class="pp-stat">
+          <div class="pp-stat-icon">👑</div>
+          <div class="pp-stat-val">${profile.debateWins}</div>
+          <div class="pp-stat-label">Victories</div>
+        </div>
+        <div class="pp-stat">
+          <div class="pp-stat-icon">🏳️</div>
+          <div class="pp-stat-val">${profile.debateLosses}</div>
+          <div class="pp-stat-label">Surrenders</div>
+        </div>
+        <div class="pp-stat">
+          <div class="pp-stat-icon">📊</div>
+          <div class="pp-stat-val">${winRate}%</div>
+          <div class="pp-stat-label">Win Rate</div>
+        </div>
+        <div class="pp-stat">
+          <div class="pp-stat-icon">⭐</div>
+          <div class="pp-stat-val">${profile.debateScoreTotal}</div>
+          <div class="pp-stat-label">Total Score</div>
+        </div>
+      </div>
+      
+      <div class="pp-section-title">📖 Trivia</div>
+      <div class="pp-stats-grid">
+        <div class="pp-stat">
+          <div class="pp-stat-icon">🏆</div>
+          <div class="pp-stat-val">${profile.triviaWins}</div>
+          <div class="pp-stat-label">Wins</div>
+        </div>
+        <div class="pp-stat">
+          <div class="pp-stat-icon">🎮</div>
+          <div class="pp-stat-val">${profile.triviaPlayed}</div>
+          <div class="pp-stat-label">Games Played</div>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    content.innerHTML = `<div style="text-align:center;color:#e85050;padding:30px">Profile not available</div>`;
   }
 }
 
